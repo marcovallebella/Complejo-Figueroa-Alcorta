@@ -7,7 +7,7 @@ online con MercadoPago o informar una transferencia.
 
 **Stack:** React + Vite + TailwindCSS · Supabase (Auth + DB + Realtime) ·
 MercadoPago Checkout Pro · Funciones serverless (Vercel).
-
+hola como va?
 ---
 
 ## 1. Crear el proyecto en Supabase
