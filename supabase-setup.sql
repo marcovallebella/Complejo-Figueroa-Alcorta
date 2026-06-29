@@ -109,15 +109,33 @@ create index if not exists idx_pagos_depto on public.pagos(depto_id);
 create index if not exists idx_pagos_mes on public.pagos(mes_id);
 
 -- 2) REALTIME -----------------------------------------------------
--- Habilita actualizaciones en vivo sobre la tabla pagos
+-- Habilita actualizaciones en vivo. El bloque DO evita el error
+-- "relation ... is already member of publication" si el script se corre
+-- más de una vez (ej. al re-ejecutar todo el setup).
 
-alter publication supabase_realtime add table public.pagos;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pagos'
+  ) then
+    alter publication supabase_realtime add table public.pagos;
+  end if;
 
--- También en vivo los egresos (para que los residentes vean los gastos al instante)
-alter publication supabase_realtime add table public.egresos;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'egresos'
+  ) then
+    alter publication supabase_realtime add table public.egresos;
+  end if;
 
--- Y los pagos de expensas extraordinarias (para la barra de avance / meta)
-alter publication supabase_realtime add table public.pagos_extraordinarios;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pagos_extraordinarios'
+  ) then
+    alter publication supabase_realtime add table public.pagos_extraordinarios;
+  end if;
+end $$;
 
 -- 3) STORAGE (comprobantes de transferencia) -----------------------
 
@@ -278,29 +296,39 @@ on conflict (anio, mes) do nothing;
 -- 7) CREACIÓN DE USUARIOS (hacer manualmente desde el Dashboard)
 -- =============================================================
 -- Supabase no permite crear usuarios de Auth por SQL directamente.
+-- Hay 3 tipos de cuenta: administrador, residente y propietario.
 -- Pasos:
 --
--- a) Ir a Authentication > Users > Add user, y crear:
+-- a) Ir a Authentication > Users > Add user, y crear una cuenta por cada
+--    persona que vaya a tener login:
 --      - 1 usuario admin, ej: admin@figueroaalcorta.com
---      - 18 usuarios de inquilinos, ej: depto1@figueroaalcorta.com ... depto18@figueroaalcorta.com
+--      - usuarios residentes, ej: depto1@figueroaalcorta.com ... depto18@figueroaalcorta.com
+--      - usuarios propietarios, ej: prop1@figueroaalcorta.com ... prop18@figueroaalcorta.com
 --    Definir una contraseña para cada uno (o usar "Auto-generate" y luego
---    compartirla con cada inquilino).
+--    compartirla con cada persona).
 --
--- b) Copiar el UUID de cada usuario inquilino (columna "UID" en la tabla
---    de usuarios) y asociarlo a su departamento, junto con su email (el
---    email se usa para generar el recibo de pago). Ejecutar por cada uno:
+-- b) RESIDENTE: copiar el UUID del usuario (columna "UID" en la tabla de
+--    usuarios) y asociarlo a su departamento. Ejecutar por cada uno:
 --
 --    update public.departamentos
 --      set user_id = '<UUID_DEL_USUARIO>', email = 'depto1@figueroaalcorta.com'
 --      where id = 1;
---    update public.departamentos
---      set user_id = '<UUID_DEL_USUARIO>', email = 'depto2@figueroaalcorta.com'
---      where id = 2;
 --    -- ... y así hasta el id = 18
---    -- (conviene que el email del depto coincida con el email de su usuario
---    --  de Auth, así el recibo va dirigido al inquilino correcto)
 --
--- c) El usuario admin NO debe asociarse a ningún departamento: el sistema
---    detecta el rol de administrador automáticamente cuando un usuario
---    autenticado no tiene ningún registro en `departamentos` con su user_id.
+-- c) PROPIETARIO: el registro en `propietarios` ya se creó en el seed
+--    (un propietario por depto, ver paso 6). Para darle login, asociale el
+--    UUID de su usuario de Auth al registro existente:
+--
+--    update public.propietarios
+--      set user_id = '<UUID_DEL_USUARIO>'
+--      where depto_id = 1;
+--    -- ... y así para cada propietario que necesite acceso
+--
+--    (Si un depto tiene varios propietarios pero solo uno va a tener login,
+--    asociá el user_id solo a esa fila; las demás quedan sin user_id.)
+--
+-- d) El usuario admin NO debe asociarse a ningún departamento ni a ningún
+--    propietario: el sistema lo detecta como administrador automáticamente
+--    cuando un usuario autenticado no tiene ningún registro propio en
+--    `departamentos` ni en `propietarios`.
 -- =============================================================
