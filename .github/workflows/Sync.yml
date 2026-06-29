@@ -1,0 +1,22 @@
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # revisa cada 30 minutos
+  workflow_dispatch: {}       # tambien se puede disparar a mano
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Traer cambios del repo original
+        run: |
+          git remote add upstream https://github.com/marcovallebella/Complejo-Figueroa-Alcorta.git
+          git fetch upstream main
+          git merge upstream/main --no-edit
+          git push origin main
