@@ -12,7 +12,7 @@
 //                      Resend y configurá EMAIL_FROM con tu propio dominio.
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY -> para leer los datos del pago
 
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from './supabaseAdmin.js'
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -75,10 +75,7 @@ export async function enviarReciboPago(pagoId) {
     return { sent: false, reason: 'sin_api_key' }
   }
 
-  const supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-  )
+  const supabaseAdmin = getSupabaseAdmin()
 
   const { data: pago } = await supabaseAdmin.from('pagos').select('*').eq('id', pagoId).maybeSingle()
   if (!pago) return { sent: false, reason: 'pago_no_encontrado' }

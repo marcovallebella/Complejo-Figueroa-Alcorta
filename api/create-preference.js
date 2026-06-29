@@ -8,7 +8,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY-> service role key (Settings > API), solo backend
 //   SITE_URL                 -> URL pública del sitio (para las back_urls)
 
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from './_lib/supabaseAdmin.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,10 +18,7 @@ export default async function handler(req, res) {
   try {
     // Cliente creado dentro del handler para no romper el arranque del
     // servidor si todavía no están seteadas las variables de entorno.
-    const supabaseAdmin = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-    )
+    const supabaseAdmin = getSupabaseAdmin()
 
     const { deptoId, mesId, monto, descripcion } = req.body
 

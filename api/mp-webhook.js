@@ -7,7 +7,7 @@
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
 
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from './_lib/supabaseAdmin.js'
 import { enviarReciboPago } from './_lib/email.js'
 
 export default async function handler(req, res) {
@@ -18,10 +18,7 @@ export default async function handler(req, res) {
   try {
     // Cliente creado dentro del handler para no romper el arranque del
     // servidor si todavía no están seteadas las variables de entorno.
-    const supabaseAdmin = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-    )
+    const supabaseAdmin = getSupabaseAdmin()
 
     // MercadoPago manda el id del pago en query (?data.id=...&type=payment)
     // o en el body, según la versión de la notificación.
