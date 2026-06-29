@@ -101,6 +101,22 @@ export default function AdminPanel() {
     cargarHistorial()
   }, [cargarHistorial])
 
+  async function eliminarPago(pago, deptoNombre) {
+    const ok = window.confirm(
+      `¿Eliminar el pago de ${deptoNombre}? Vuelve a quedar pendiente/vencido.`,
+    )
+    if (!ok) return
+
+    const { error } = await supabase.from('pagos').delete().eq('id', pago.id)
+    if (error) {
+      toast.error('No se pudo eliminar el pago')
+      return
+    }
+    toast.success(`Pago de ${deptoNombre} eliminado`)
+    cargarResumen()
+    cargarHistorial()
+  }
+
   async function handleGuardarMonto(e) {
     e.preventDefault()
     setGuardandoMonto(true)
@@ -242,6 +258,7 @@ export default function AdminPanel() {
                 <th className="px-4 py-3 font-medium">Fecha de pago</th>
                 <th className="px-4 py-3 font-medium">Morosidad</th>
                 <th className="px-4 py-3 font-medium text-right">Total adeudado</th>
+                <th className="px-4 py-3 font-medium w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -266,6 +283,18 @@ export default function AdminPanel() {
                         <span className="text-green-600">$0</span>
                       )}
                     </td>
+                    <td className="px-4 py-3">
+                      {pago && (
+                        <button
+                          onClick={() => eliminarPago(pago, d.nombre)}
+                          aria-label="Eliminar pago"
+                          title="Eliminar pago (vuelve a quedar pendiente)"
+                          className="text-slate-400 hover:text-red-600 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
@@ -278,6 +307,7 @@ export default function AdminPanel() {
                 <td className="px-4 py-3 text-right whitespace-nowrap text-red-600">
                   ${totalAdeudadoComplejo.toLocaleString('es-AR')}
                 </td>
+                <td></td>
               </tr>
             </tfoot>
           </table>
@@ -347,12 +377,13 @@ export default function AdminPanel() {
                 <th className="px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3 font-medium">Registrado por</th>
                 <th className="px-4 py-3 font-medium">Recibo</th>
+                <th className="px-4 py-3 font-medium w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {historial.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400">Sin resultados</td>
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-400">Sin resultados</td>
                 </tr>
               )}
               {historial.map((p) => (
@@ -374,6 +405,16 @@ export default function AdminPanel() {
                     ) : (
                       <span className="text-slate-300 text-xs">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => eliminarPago(p, p.departamentos?.nombre || '')}
+                      aria-label="Eliminar pago"
+                      title="Eliminar pago (vuelve a quedar pendiente)"
+                      className="text-slate-400 hover:text-red-600 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition"
+                    >
+                      ✕
+                    </button>
                   </td>
                 </tr>
               ))}
