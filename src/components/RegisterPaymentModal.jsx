@@ -53,16 +53,20 @@ export default function RegisterPaymentModal({ departamentos, onClose, onRegistr
       mesRow = nuevoMes
     }
 
-    const { error } = await supabase.from('pagos').insert({
-      depto_id: Number(deptoId),
-      mes_id: mesRow.id,
-      fecha_pago: fecha,
-      metodo_pago: metodo,
-      monto: Number(monto),
-      registrado_por: 'admin',
-      estado: 'pagado',
-      notas,
-    })
+    const { data: pagoCreado, error } = await supabase
+      .from('pagos')
+      .insert({
+        depto_id: Number(deptoId),
+        mes_id: mesRow.id,
+        fecha_pago: fecha,
+        metodo_pago: metodo,
+        monto: Number(monto),
+        registrado_por: 'admin',
+        estado: 'pagado',
+        notas,
+      })
+      .select()
+      .single()
 
     setEnviando(false)
 
@@ -72,8 +76,31 @@ export default function RegisterPaymentModal({ departamentos, onClose, onRegistr
     }
 
     toast.success('Pago registrado correctamente')
+    enviarReciboPorMail(pagoCreado.id)
     onRegistrado?.()
     onClose()
+  }
+
+  // Dispara el envío del recibo por mail (backend con Resend). No bloquea
+  // el flujo de registro del pago si el email falla o el backend no está
+  // configurado (ej. en modo demo / desarrollo local sin server.js).
+  async function enviarReciboPorMail(pagoId) {
+    try {
+      const respuesta = await fetch('/api/send-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pagoId }),
+      })
+      const resultado = await respuesta.json()
+      if (resultado.sent) {
+        toast.success('Recibo enviado por mail')
+      } else if (resultado.reason === 'sin_email_cargado') {
+        toast.error('No se pudo enviar el recibo: el depto no tiene email cargado')
+      }
+    } catch (err) {
+      // Backend no disponible (ej. demo/dev local) — no interrumpe el flujo
+      console.warn('No se pudo enviar el recibo por mail:', err)
+    }
   }
 
   return (

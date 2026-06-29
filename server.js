@@ -1,7 +1,8 @@
 // Servidor Node.js (Express) para producción — pensado para Hostinger
-// (hosting "Node.js app"). Hace dos cosas:
+// (hosting "Node.js app"). Hace tres cosas:
 //   1. Sirve el frontend ya compilado por Vite (carpeta dist/).
 //   2. Expone los endpoints de MercadoPago (crear preferencia y webhook).
+//   3. Expone el endpoint de envío de recibos por mail (Resend).
 //
 // IMPORTANTE: antes de iniciar este servidor hay que compilar el frontend
 // con `npm run build` (genera la carpeta dist/).
@@ -11,7 +12,9 @@
 //   SUPABASE_URL               -> backend (mismo proyecto de Supabase)
 //   SUPABASE_SERVICE_ROLE_KEY  -> clave secreta service_role (solo backend)
 //   MP_ACCESS_TOKEN            -> token de MercadoPago
-//   SITE_URL                   -> URL pública del sitio (para las back_urls de MP)
+//   SITE_URL                   -> URL pública del sitio (back_urls de MP y logo del mail)
+//   RESEND_API_KEY             -> API key de Resend, para mandar los recibos por mail
+//   EMAIL_FROM                 -> opcional, remitente del mail (ver api/_lib/email.js)
 //
 // (Las variables del frontend VITE_* se usan al compilar, no acá.)
 
@@ -45,6 +48,16 @@ app.all('/api/mp-webhook', async (req, res) => {
   } catch (err) {
     console.error('Error en /api/mp-webhook:', err)
     return res.status(200).json({ ok: true })
+  }
+})
+
+app.post('/api/send-receipt', async (req, res) => {
+  try {
+    const { default: handler } = await import('./api/send-receipt.js')
+    return handler(req, res)
+  } catch (err) {
+    console.error('Error en /api/send-receipt:', err)
+    return res.status(500).json({ error: 'Backend de email no configurado' })
   }
 })
 

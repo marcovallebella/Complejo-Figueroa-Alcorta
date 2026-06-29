@@ -8,6 +8,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from '@supabase/supabase-js'
+import { enviarReciboPago } from './_lib/email.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') {
@@ -63,16 +64,28 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
-    await supabaseAdmin.from('pagos').insert({
-      depto_id: deptoId,
-      mes_id: mesId,
-      fecha_pago: pago.date_approved || new Date().toISOString(),
-      metodo_pago: 'mercadopago',
-      monto: pago.transaction_amount,
-      registrado_por: 'sistema',
-      estado: 'pagado',
-      notas: `MercadoPago payment_id: ${pago.id}`,
-    })
+    const { data: pagoCreado } = await supabaseAdmin
+      .from('pagos')
+      .insert({
+        depto_id: deptoId,
+        mes_id: mesId,
+        fecha_pago: pago.date_approved || new Date().toISOString(),
+        metodo_pago: 'mercadopago',
+        monto: pago.transaction_amount,
+        registrado_por: 'sistema',
+        estado: 'pagado',
+        notas: `MercadoPago payment_id: ${pago.id}`,
+      })
+      .select()
+      .single()
+
+    if (pagoCreado) {
+      try {
+        await enviarReciboPago(pagoCreado.id)
+      } catch (errMail) {
+        console.error('No se pudo enviar el recibo por mail:', errMail)
+      }
+    }
 
     return res.status(200).json({ ok: true })
   } catch (err) {

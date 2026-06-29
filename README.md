@@ -58,6 +58,31 @@ MercadoPago Checkout Pro · Funciones serverless (Vercel).
 
 ---
 
+## 2.bis Configurar el envío de recibos por mail (Resend)
+
+Cuando el admin registra un pago (o se confirma un pago de MercadoPago), el
+sistema le manda automáticamente el recibo por mail al residente. Esto usa
+[Resend](https://resend.com), un servicio de envío de emails con plan
+gratuito (3000 mails/mes).
+
+1. Creá una cuenta gratis en [resend.com](https://resend.com).
+2. En el dashboard: **API Keys → Create API Key** → copiá el valor →
+   variable `RESEND_API_KEY`.
+3. (Opcional, recomendado para producción) **Domains → Add Domain** →
+   verificá tu propio dominio agregando los registros DNS que te indica.
+   Una vez verificado, configurá `EMAIL_FROM` con un mail de ese dominio,
+   ej: `Complejo Figueroa Alcorta <recibos@figueroaalcorta.com>`.
+   - Si no verificás un dominio propio, los mails se envían igual usando
+     el dominio de pruebas de Resend (`onboarding@resend.dev`), pero
+     pueden caer en spam o llegar con menos confiabilidad — sirve para
+     probar, no se recomienda dejarlo así de forma permanente.
+4. El envío ocurre automáticamente desde
+   [`api/_lib/email.js`](./api/_lib/email.js); no requiere ninguna acción
+   manual del admin. Si `RESEND_API_KEY` no está configurada, el sistema
+   simplemente no manda el mail (sin romper el registro del pago).
+
+---
+
 ## 3. Correr el proyecto localmente
 
 ```bash
