@@ -8,6 +8,7 @@ import EgresosPanel from './EgresosPanel'
 import BalancePanel from './BalancePanel'
 import ExtraordinariasPanel from './ExtraordinariasPanel'
 import { generarRecibo } from '../lib/recibo'
+import { descargarCSV } from '../lib/csv'
 
 export default function AdminPanel() {
   const [departamentos, setDepartamentos] = useState([])
@@ -115,6 +116,28 @@ export default function AdminPanel() {
     toast.success(`Pago de ${deptoNombre} eliminado`)
     cargarResumen()
     cargarHistorial()
+  }
+
+  function exportarHistorialExcel() {
+    if (historial.length === 0) {
+      toast.error('No hay datos para exportar')
+      return
+    }
+
+    const encabezados = ['Depto', 'Mes', 'Fecha de pago', 'Método de pago', 'Monto', 'Estado', 'Registrado por']
+    const filas = historial.map((p) => [
+      p.departamentos?.nombre || '',
+      p.meses ? nombreMes(p.meses.mes, p.meses.anio) : '',
+      new Date(p.fecha_pago).toLocaleDateString('es-AR'),
+      p.metodo_pago,
+      Number(p.monto || 0).toFixed(2),
+      p.estado,
+      p.registrado_por,
+    ])
+
+    const hoy = new Date().toISOString().slice(0, 10)
+    descargarCSV(`historial-pagos-${hoy}.csv`, encabezados, filas)
+    toast.success('Excel descargado')
   }
 
   async function handleGuardarMonto(e) {
@@ -338,7 +361,15 @@ export default function AdminPanel() {
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold text-slate-600 mb-3">Historial completo</h3>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h3 className="text-sm font-semibold text-slate-600">Historial completo</h3>
+          <button
+            onClick={exportarHistorialExcel}
+            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium px-3 py-2 rounded-lg transition"
+          >
+            ⬇ Exportar a Excel
+          </button>
+        </div>
         <div className="flex flex-wrap gap-3 mb-4">
           <select
             value={filtroDepto}
