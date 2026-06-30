@@ -2,8 +2,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/AuthContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import PagoResultado from './pages/PagoResultado'
-import RestablecerContrasena from './pages/RestablecerContrasena'
 
 function RutaPrivada({ children }) {
   const { session, cargando } = useAuth()
@@ -24,10 +22,6 @@ function Rutas() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/restablecer-contrasena" element={<RestablecerContrasena />} />
-      <Route path="/pago/exito" element={<PagoResultado tipo="exito" />} />
-      <Route path="/pago/pendiente" element={<PagoResultado tipo="pendiente" />} />
-      <Route path="/pago/error" element={<PagoResultado tipo="error" />} />
       <Route
         path="/"
         element={

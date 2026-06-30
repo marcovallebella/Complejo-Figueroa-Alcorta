@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { supabase, mesActual } from '../lib/supabase'
 
-const METODOS = ['efectivo', 'transferencia', 'mercadopago', 'otro']
+const METODOS = ['efectivo', 'transferencia', 'otro']
 
 export default function RegisterPaymentModal({ departamentos, onClose, onRegistrado }) {
   const { anio, mes } = mesActual()
