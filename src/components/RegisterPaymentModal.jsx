@@ -4,9 +4,9 @@ import { supabase, mesActual } from '../lib/supabase'
 
 const METODOS = ['efectivo', 'transferencia', 'otro']
 
-export default function RegisterPaymentModal({ departamentos, onClose, onRegistrado }) {
+export default function RegisterPaymentModal({ departamentos, deptoIdInicial, onClose, onRegistrado }) {
   const { anio, mes } = mesActual()
-  const [deptoId, setDeptoId] = useState(departamentos[0]?.id || '')
+  const [deptoId, setDeptoId] = useState(deptoIdInicial || departamentos[0]?.id || '')
   const [anioSel, setAnioSel] = useState(anio)
   const [mesSel, setMesSel] = useState(mes)
   const [monto, setMonto] = useState('')
