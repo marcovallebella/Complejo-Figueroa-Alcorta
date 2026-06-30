@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 
 // Grados de avance del reclamo (en orden de progreso)
 const ESTADOS = [
-  { value: 'visualizado', label: 'Visualizado', icono: '👁', clases: 'bg-blue-100 text-blue-700' },
+  { value: 'visto', label: 'Visto', icono: '👁', clases: 'bg-blue-100 text-blue-700' },
   { value: 'en_proceso', label: 'En proceso', icono: '🛠', clases: 'bg-amber-100 text-amber-700' },
   { value: 'solucionado', label: 'Solucionado', icono: '✅', clases: 'bg-green-100 text-green-700' },
 ]
@@ -80,7 +80,7 @@ export default function ReclamosPanel({ editable = false, departamento = null, c
       descripcion,
       imagen1_url,
       imagen2_url,
-      estado: 'visualizado',
+      estado: 'visto',
       creado_por: creadoPor,
     })
 

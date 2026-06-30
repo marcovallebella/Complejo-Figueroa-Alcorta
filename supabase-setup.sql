@@ -118,8 +118,8 @@ create table if not exists public.reclamos (
   descripcion text not null,
   imagen1_url text,
   imagen2_url text,
-  estado text not null default 'visualizado'
-    check (estado in ('visualizado', 'en_proceso', 'solucionado')),
+  estado text not null default 'visto'
+    check (estado in ('visto', 'en_proceso', 'solucionado')),
   creado_por text not null default 'residente'
     check (creado_por in ('residente', 'propietario', 'admin')),
   created_at timestamptz default now(),
