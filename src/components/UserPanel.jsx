@@ -5,6 +5,7 @@ import PaymentTable from './PaymentTable'
 import InformarTransferenciaModal from './InformarTransferenciaModal'
 import EgresosPanel from './EgresosPanel'
 import BalancePanel from './BalancePanel'
+import ReclamosPanel from './ReclamosPanel'
 import { generarRecibo } from '../lib/recibo'
 
 export default function UserPanel({ departamento }) {
@@ -104,6 +105,8 @@ export default function UserPanel({ departamento }) {
       <EgresosPanel />
 
       <BalancePanel />
+
+      <ReclamosPanel departamento={departamento} creadoPor="residente" />
 
 
       <section>

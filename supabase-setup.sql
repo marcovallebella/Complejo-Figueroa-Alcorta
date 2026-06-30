@@ -108,6 +108,26 @@ create table if not exists public.pagos (
 create index if not exists idx_pagos_depto on public.pagos(depto_id);
 create index if not exists idx_pagos_mes on public.pagos(mes_id);
 
+-- Reclamos y proyectos: cualquier residente/propietario puede reportar un
+-- reclamo (con hasta 2 imágenes); el admin lo atiende y va actualizando el
+-- grado de avance. depto_id queda null cuando lo crea el administrador
+-- (ej. un "proyecto" del complejo, no asociado a una unidad puntual).
+create table if not exists public.reclamos (
+  id bigint generated always as identity primary key,
+  depto_id int references public.departamentos(id) on delete set null,
+  descripcion text not null,
+  imagen1_url text,
+  imagen2_url text,
+  estado text not null default 'visto'
+    check (estado in ('visto', 'en_proceso', 'solucionado')),
+  creado_por text not null default 'residente'
+    check (creado_por in ('residente', 'propietario', 'admin')),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_reclamos_depto on public.reclamos(depto_id);
+
 -- 2) REALTIME -----------------------------------------------------
 -- Habilita actualizaciones en vivo. El bloque DO evita el error
 -- "relation ... is already member of publication" si el script se corre
@@ -135,13 +155,40 @@ begin
   ) then
     alter publication supabase_realtime add table public.pagos_extraordinarios;
   end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'reclamos'
+  ) then
+    alter publication supabase_realtime add table public.reclamos;
+  end if;
 end $$;
 
--- 3) STORAGE (comprobantes de transferencia) -----------------------
+-- 3) STORAGE (comprobantes de transferencia + imágenes de reclamos) ----
 
 insert into storage.buckets (id, name, public)
 values ('comprobantes', 'comprobantes', true)
 on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('reclamos', 'reclamos', true)
+on conflict (id) do nothing;
+
+-- Políticas de storage.objects: lectura pública (son buckets "public") e
+-- inserción para cualquier usuario autenticado. Sin estas políticas, las
+-- subidas fallan por RLS aunque el bucket esté marcado como público
+-- (el flag "public" solo habilita la LECTURA, no el insert).
+create policy "lectura_publica_comprobantes" on storage.objects
+  for select using (bucket_id = 'comprobantes');
+
+create policy "subir_comprobantes" on storage.objects
+  for insert to authenticated with check (bucket_id = 'comprobantes');
+
+create policy "lectura_publica_reclamos_storage" on storage.objects
+  for select using (bucket_id = 'reclamos');
+
+create policy "subir_reclamos_storage" on storage.objects
+  for insert to authenticated with check (bucket_id = 'reclamos');
 
 -- 4) ROW LEVEL SECURITY ---------------------------------------------
 
@@ -212,6 +259,23 @@ create policy "lectura_pagos_extra" on public.pagos_extraordinarios
 
 create policy "admin_gestiona_pagos_extra" on public.pagos_extraordinarios
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- Reclamos y proyectos: todos los autenticados ven todos los reclamos
+-- (tablón compartido del complejo). Cualquier usuario logueado puede crear
+-- un reclamo. Solo el admin puede cambiar el estado y eliminar.
+alter table public.reclamos enable row level security;
+
+create policy "lectura_reclamos" on public.reclamos
+  for select to authenticated using (true);
+
+create policy "insertar_reclamos" on public.reclamos
+  for insert to authenticated with check (true);
+
+create policy "admin_actualiza_reclamos" on public.reclamos
+  for update to authenticated using (public.is_admin());
+
+create policy "admin_borra_reclamos" on public.reclamos
+  for delete to authenticated using (public.is_admin());
 
 create policy "lectura_meses" on public.meses
   for select to authenticated using (true);

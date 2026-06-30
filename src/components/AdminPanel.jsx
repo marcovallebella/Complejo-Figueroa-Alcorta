@@ -7,6 +7,7 @@ import PersonasPanel from './PersonasPanel'
 import EgresosPanel from './EgresosPanel'
 import BalancePanel from './BalancePanel'
 import ExtraordinariasPanel from './ExtraordinariasPanel'
+import ReclamosPanel from './ReclamosPanel'
 import { generarRecibo } from '../lib/recibo'
 import { descargarCSV } from '../lib/csv'
 
@@ -23,7 +24,7 @@ export default function AdminPanel() {
   const [filtroMes, setFiltroMes] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
-  const [modulo, setModulo] = useState('pagos') // 'pagos' | 'residentes'
+  const [modulo, setModulo] = useState('pagos') // 'pagos' | 'residentes' | 'propietarios' | 'egresos' | 'extraordinarias' | 'balance' | 'reclamos'
   const [deudaPorDepto, setDeudaPorDepto] = useState({})
 
   const { anio, mes } = mesActual()
@@ -253,6 +254,17 @@ export default function AdminPanel() {
             </svg>
             Balance
           </button>
+          <button
+            onClick={() => setModulo('reclamos')}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition ${
+              modulo === 'reclamos' ? 'bg-tinta text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            Reclamos
+          </button>
         </nav>
       </aside>
 
@@ -479,6 +491,8 @@ export default function AdminPanel() {
         {modulo === 'extraordinarias' && <ExtraordinariasPanel editable />}
 
         {modulo === 'balance' && <BalancePanel />}
+
+        {modulo === 'reclamos' && <ReclamosPanel editable creadoPor="admin" />}
       </div>
 
       {modalAbierto && (

@@ -21,6 +21,7 @@ const store = {
   propietarios: [],
   extraordinarias: [],
   pagos_extraordinarios: [],
+  reclamos: [],
 }
 
 function seed() {
@@ -137,6 +138,51 @@ function seed() {
     estado: 'pagado',
     comprobante_url: null,
   }))
+
+  // Reclamos de ejemplo
+  const ahora = new Date()
+  store.reclamos = [
+    {
+      id: 1,
+      depto_id: 3,
+      descripcion: 'La luz del pasillo del 3er piso no enciende desde hace una semana.',
+      imagen1_url: null,
+      imagen2_url: null,
+      estado: 'en_proceso',
+      creado_por: 'residente',
+      created_at: new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 5).toISOString(),
+    },
+    {
+      id: 2,
+      depto_id: 7,
+      descripcion: 'El portón del garage hace ruido al abrirse y tarda mucho.',
+      imagen1_url: null,
+      imagen2_url: null,
+      estado: 'visto',
+      creado_por: 'residente',
+      created_at: new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 2).toISOString(),
+    },
+    {
+      id: 3,
+      depto_id: null,
+      descripcion: 'Proyecto: renovación de la sala de bicicletas (piso, pintura y nuevos soportes).',
+      imagen1_url: null,
+      imagen2_url: null,
+      estado: 'visto',
+      creado_por: 'admin',
+      created_at: new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 1).toISOString(),
+    },
+    {
+      id: 4,
+      depto_id: 12,
+      descripcion: 'Humedad en la pared del dormitorio principal.',
+      imagen1_url: null,
+      imagen2_url: null,
+      estado: 'solucionado',
+      creado_por: 'residente',
+      created_at: new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - 10).toISOString(),
+    },
+  ]
 }
 seed()
 
@@ -175,6 +221,9 @@ function applyEmbeds(rows, selectStr) {
       if (name === 'meses') copy.meses = store.meses.find((x) => x.id === row.mes_id) || null
       if (name === 'departamentos') {
         copy.departamentos = store.departamentos.find((x) => x.id === row.depto_id) || null
+      }
+      if (name === 'residentes') {
+        copy.residentes = store.residentes.filter((x) => x.depto_id === row.id)
       }
     })
     return copy

@@ -1,5 +1,6 @@
 import ExtraordinariasPanel from './ExtraordinariasPanel'
 import PaymentTable from './PaymentTable'
+import ReclamosPanel from './ReclamosPanel'
 
 // Panel del Propietario:
 //  - Ve el avance de las expensas extraordinarias (barra meta), con su unidad
@@ -20,6 +21,8 @@ export default function PropietarioPanel({ departamento }) {
         </p>
         <PaymentTable />
       </section>
+
+      <ReclamosPanel departamento={departamento} creadoPor="propietario" />
     </div>
   )
 }
