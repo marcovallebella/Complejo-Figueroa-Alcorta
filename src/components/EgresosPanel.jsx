@@ -2,35 +2,52 @@ import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 
-// Módulo de egresos / gastos del complejo.
-//   editable = true  -> vista del administrador (registra, edita y borra)
-//   editable = false -> vista del residente (solo lectura)
-//
-// Las categorías están agrupadas en servicios fijos y gastos eventuales,
-// según los ejemplos pedidos (luz, agua, limpieza, ascensores / electricista,
-// cerrajero, etc.).
 const GRUPOS = [
   { grupo: 'Servicios', items: ['Luz', 'Agua', 'Gas', 'Limpieza', 'Ascensores'] },
   { grupo: 'Eventuales', items: ['Electricista', 'Cerrajero', 'Plomero', 'Mantenimiento'] },
   { grupo: 'Otros', items: ['Administración', 'Seguro', 'Otro'] },
 ]
 
+const MESES_NOMBRE = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
+
+function mesAnterior(anio, mes) {
+  return mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 }
+}
+function mesSiguiente(anio, mes) {
+  return mes === 12 ? { anio: anio + 1, mes: 1 } : { anio, mes: mes + 1 }
+}
+
 export default function EgresosPanel({ editable = false }) {
+  const hoy = new Date()
+  const [vistaAnio, setVistaAnio] = useState(hoy.getFullYear())
+  const [vistaMes, setVistaMes] = useState(hoy.getMonth() + 1)
+
   const [egresos, setEgresos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [categoria, setCategoria] = useState('Luz')
   const [descripcion, setDescripcion] = useState('')
   const [monto, setMonto] = useState('')
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10))
+  const [fecha, setFecha] = useState(hoy.toISOString().slice(0, 10))
   const [enviando, setEnviando] = useState(false)
 
   const cargar = useCallback(async () => {
-    const { data } = await supabase.from('egresos').select('*').order('fecha', { ascending: false })
+    const desde = `${vistaAnio}-${String(vistaMes).padStart(2, '0')}-01`
+    const hasta = `${vistaAnio}-${String(vistaMes).padStart(2, '0')}-31`
+    const { data } = await supabase
+      .from('egresos')
+      .select('*')
+      .gte('fecha', desde)
+      .lte('fecha', hasta)
+      .order('fecha', { ascending: false })
     setEgresos(data || [])
     setCargando(false)
-  }, [])
+  }, [vistaAnio, vistaMes])
 
   useEffect(() => {
+    setCargando(true)
     cargar()
     const canal = supabase
       .channel('egresos-realtime')
@@ -38,6 +55,25 @@ export default function EgresosPanel({ editable = false }) {
       .subscribe()
     return () => supabase.removeChannel(canal)
   }, [cargar])
+
+  function irAnterior() {
+    const { anio, mes } = mesAnterior(vistaAnio, vistaMes)
+    setVistaAnio(anio)
+    setVistaMes(mes)
+  }
+
+  function irSiguiente() {
+    const { anio, mes } = mesSiguiente(vistaAnio, vistaMes)
+    setVistaAnio(anio)
+    setVistaMes(mes)
+  }
+
+  function irMesActual() {
+    setVistaAnio(hoy.getFullYear())
+    setVistaMes(hoy.getMonth() + 1)
+  }
+
+  const esHoy = vistaAnio === hoy.getFullYear() && vistaMes === hoy.getMonth() + 1
 
   async function registrar(e) {
     e.preventDefault()
@@ -61,7 +97,10 @@ export default function EgresosPanel({ editable = false }) {
     toast.success('Egreso registrado')
     setDescripcion('')
     setMonto('')
-    cargar()
+    // Ir al mes del egreso registrado para verlo
+    const fechaEg = new Date(fecha + 'T12:00:00')
+    setVistaAnio(fechaEg.getFullYear())
+    setVistaMes(fechaEg.getMonth() + 1)
   }
 
   async function eliminar(id) {
@@ -75,10 +114,6 @@ export default function EgresosPanel({ editable = false }) {
   }
 
   const total = egresos.reduce((acc, e) => acc + Number(e.monto || 0), 0)
-
-  if (cargando) {
-    return <div className="py-20 text-center text-slate-400 text-sm">Cargando egresos...</div>
-  }
 
   return (
     <section>
@@ -152,6 +187,36 @@ export default function EgresosPanel({ editable = false }) {
         </form>
       )}
 
+      {/* Navegador de mes */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={irAnterior}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 transition"
+          >
+            ‹
+          </button>
+          <span className="text-sm font-medium text-slate-700 min-w-[130px] text-center">
+            {MESES_NOMBRE[vistaMes - 1]} {vistaAnio}
+          </span>
+          <button
+            onClick={irSiguiente}
+            disabled={esHoy}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 transition disabled:opacity-30 disabled:cursor-default"
+          >
+            ›
+          </button>
+        </div>
+        {!esHoy && (
+          <button
+            onClick={irMesActual}
+            className="text-xs text-tinta hover:underline font-medium"
+          >
+            Volver al mes actual
+          </button>
+        )}
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-tinta/10">
         <table className="min-w-full text-sm">
           <thead>
@@ -164,17 +229,24 @@ export default function EgresosPanel({ editable = false }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {egresos.length === 0 && (
+            {cargando && (
               <tr>
                 <td colSpan={editable ? 5 : 4} className="px-4 py-6 text-center text-slate-400">
-                  No hay egresos registrados todavía
+                  Cargando...
+                </td>
+              </tr>
+            )}
+            {!cargando && egresos.length === 0 && (
+              <tr>
+                <td colSpan={editable ? 5 : 4} className="px-4 py-6 text-center text-slate-400">
+                  No hay egresos registrados en {MESES_NOMBRE[vistaMes - 1]} {vistaAnio}
                 </td>
               </tr>
             )}
             {egresos.map((e) => (
               <tr key={e.id}>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  {new Date(e.fecha).toLocaleDateString('es-AR')}
+                  {new Date(e.fecha + 'T12:00:00').toLocaleDateString('es-AR')}
                 </td>
                 <td className="px-4 py-3">
                   <span className="inline-block bg-slate-100 text-slate-600 text-xs font-medium px-2.5 py-1 rounded-full">
@@ -199,11 +271,11 @@ export default function EgresosPanel({ editable = false }) {
               </tr>
             ))}
           </tbody>
-          {egresos.length > 0 && (
+          {!cargando && egresos.length > 0 && (
             <tfoot>
               <tr className="bg-slate-50 font-medium text-tinta">
                 <td className="px-4 py-3" colSpan={3}>
-                  Total de egresos
+                  Total {MESES_NOMBRE[vistaMes - 1]}
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   ${total.toLocaleString('es-AR')}
