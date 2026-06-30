@@ -25,8 +25,8 @@ const store = {
 }
 
 function seed() {
-  // 18 departamentos. El Depto 12 es el "inquilino demo" (tiene deuda).
-  for (let i = 1; i <= 18; i++) {
+  // 19 departamentos. El Depto 12 es el "inquilino demo" (tiene deuda).
+  for (let i = 1; i <= 19; i++) {
     store.departamentos.push({
       id: i,
       nombre: `Depto ${i}`,
