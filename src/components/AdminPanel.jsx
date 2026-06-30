@@ -8,6 +8,7 @@ import EgresosPanel from './EgresosPanel'
 import BalancePanel from './BalancePanel'
 import ExtraordinariasPanel from './ExtraordinariasPanel'
 import ReclamosPanel from './ReclamosPanel'
+import TransferenciasPanel from './TransferenciasPanel'
 import { generarRecibo } from '../lib/recibo'
 import { descargarCSV } from '../lib/csv'
 
@@ -24,7 +25,8 @@ export default function AdminPanel() {
   const [filtroMes, setFiltroMes] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
-  const [modulo, setModulo] = useState('pagos') // 'pagos' | 'residentes' | 'propietarios' | 'egresos' | 'extraordinarias' | 'balance' | 'reclamos'
+  const [modulo, setModulo] = useState('pagos') // 'pagos' | 'transferencias' | 'residentes' | 'propietarios' | 'egresos' | 'extraordinarias' | 'balance' | 'reclamos'
+  const [pendientesTransferencias, setPendientesTransferencias] = useState(0)
   const [deudaPorDepto, setDeudaPorDepto] = useState({})
 
   const { anio, mes } = mesActual()
@@ -87,17 +89,29 @@ export default function AdminPanel() {
     setHistorial(filtrado)
   }, [filtroDepto, filtroAnio, filtroMes])
 
+  const cargarPendientesTransferencias = useCallback(async () => {
+    const { count } = await supabase
+      .from('transferencias')
+      .select('*', { count: 'exact', head: true })
+      .eq('estado', 'pendiente')
+    setPendientesTransferencias(count || 0)
+  }, [])
+
   useEffect(() => {
     cargarResumen()
+    cargarPendientesTransferencias()
     const canal = supabase
       .channel('admin-pagos-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pagos' }, () => {
         cargarResumen()
         cargarHistorial()
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transferencias' }, () => {
+        cargarPendientesTransferencias()
+      })
       .subscribe()
     return () => supabase.removeChannel(canal)
-  }, [cargarResumen, cargarHistorial])
+  }, [cargarResumen, cargarHistorial, cargarPendientesTransferencias])
 
   useEffect(() => {
     cargarHistorial()
@@ -187,6 +201,26 @@ export default function AdminPanel() {
               <line x1="9" y1="16" x2="13" y2="16" />
             </svg>
             Registro de pagos
+          </button>
+          <button
+            onClick={() => setModulo('transferencias')}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition ${
+              modulo === 'transferencias' ? 'bg-tinta text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14" />
+              <path d="M5 12l7-7 7 7" />
+              <path d="M5 19h14" />
+            </svg>
+            <span className="flex-1">Transferencias</span>
+            {pendientesTransferencias > 0 && (
+              <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ml-auto ${
+                modulo === 'transferencias' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {pendientesTransferencias}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setModulo('residentes')}
@@ -466,6 +500,10 @@ export default function AdminPanel() {
         </div>
       </section>
           </div>
+        )}
+
+        {modulo === 'transferencias' && (
+          <TransferenciasPanel departamentos={departamentos} />
         )}
 
         {modulo === 'residentes' && (
