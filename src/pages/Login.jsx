@@ -7,7 +7,6 @@ import Logo from '../components/Logo'
 
 export default function Login() {
   const { session, cargando } = useAuth()
-  const [modo, setModo] = useState('login') // 'login' | 'recuperar'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -24,21 +23,6 @@ export default function Login() {
       return
     }
     toast.success('¡Bienvenido!')
-  }
-
-  async function handleRecuperar(e) {
-    e.preventDefault()
-    setEnviando(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/restablecer-contrasena`,
-    })
-    setEnviando(false)
-    if (error) {
-      toast.error(error.message || 'No se pudo enviar el mail de recuperación')
-      return
-    }
-    toast.success('Si el email existe, te llegó un link para crear una nueva contraseña')
-    setModo('login')
   }
 
   return (
@@ -80,81 +64,37 @@ export default function Login() {
           </div>
         )}
 
-        {modo === 'login' ? (
-          <>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  placeholder="depto1@figueroaalcorta.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Contraseña</label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  placeholder="••••••••"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={enviando}
-                className="w-full bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition"
-              >
-                {enviando ? 'Ingresando...' : 'Ingresar'}
-              </button>
-            </form>
-            <button
-              type="button"
-              onClick={() => setModo('recuperar')}
-              className="w-full text-center text-xs text-slate-400 hover:text-slate-600 mt-4 transition"
-            >
-              ¿Olvidaste tu contraseña?
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-slate-500 text-center mb-5">
-              Ingresá tu email y te mandamos un link para crear una nueva contraseña.
-            </p>
-            <form onSubmit={handleRecuperar} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-                  placeholder="depto1@figueroaalcorta.com"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={enviando}
-                className="w-full bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition"
-              >
-                {enviando ? 'Enviando...' : 'Enviar link de recuperación'}
-              </button>
-            </form>
-            <button
-              type="button"
-              onClick={() => setModo('login')}
-              className="w-full text-center text-xs text-slate-400 hover:text-slate-600 mt-4 transition"
-            >
-              Volver a ingresar
-            </button>
-          </>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              placeholder="depto1@complejofigueroa.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-1">Contraseña</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              placeholder="••••••••"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={enviando}
+            className="w-full bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition"
+          >
+            {enviando ? 'Ingresando...' : 'Ingresar'}
+          </button>
+        </form>
       </div>
     </div>
   )
