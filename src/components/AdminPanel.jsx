@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { supabase, calcularEstado, mesActual, nombreMes } from '../lib/supabase'
 import EstadoBadge from './EstadoBadge'
+import PaymentTable from './PaymentTable'
 import RegisterPaymentModal from './RegisterPaymentModal'
 import PersonasPanel from './PersonasPanel'
 import EgresosPanel from './EgresosPanel'
@@ -9,6 +10,7 @@ import BalancePanel from './BalancePanel'
 import ExtraordinariasPanel from './ExtraordinariasPanel'
 import ReclamosPanel from './ReclamosPanel'
 import TransferenciasPanel from './TransferenciasPanel'
+import UsuariosPanel from './UsuariosPanel'
 import { generarRecibo } from '../lib/recibo'
 import { descargarCSV } from '../lib/csv'
 
@@ -25,7 +27,7 @@ export default function AdminPanel() {
   const [filtroMes, setFiltroMes] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
-  const [modulo, setModulo] = useState('pagos') // 'pagos' | 'transferencias' | 'residentes' | 'propietarios' | 'egresos' | 'extraordinarias' | 'balance' | 'reclamos'
+  const [modulo, setModulo] = useState('pagos') // 'pagos' | 'transferencias' | 'residentes' | 'propietarios' | 'egresos' | 'extraordinarias' | 'balance' | 'reclamos' | 'usuarios'
   const [pendientesTransferencias, setPendientesTransferencias] = useState(0)
   const [deudaPorDepto, setDeudaPorDepto] = useState({})
 
@@ -299,6 +301,18 @@ export default function AdminPanel() {
             </svg>
             Reclamos
           </button>
+          <button
+            onClick={() => setModulo('usuarios')}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition ${
+              modulo === 'usuarios' ? 'bg-tinta text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="3.2" />
+              <path d="M5.5 20a6.5 6.5 0 0 1 13 0" />
+            </svg>
+            Usuarios
+          </button>
         </nav>
       </aside>
 
@@ -404,6 +418,11 @@ export default function AdminPanel() {
             Guardar
           </button>
         </form>
+      </section>
+
+      <section>
+        <h3 className="text-sm font-semibold text-slate-600 mb-3">Estado general del complejo</h3>
+        <PaymentTable mostrarMontos />
       </section>
 
       <section>
@@ -531,6 +550,8 @@ export default function AdminPanel() {
         {modulo === 'balance' && <BalancePanel />}
 
         {modulo === 'reclamos' && <ReclamosPanel editable creadoPor="admin" />}
+
+        {modulo === 'usuarios' && <UsuariosPanel />}
       </div>
 
       {modalAbierto && (

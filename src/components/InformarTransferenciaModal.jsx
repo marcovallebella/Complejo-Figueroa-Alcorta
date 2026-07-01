@@ -1,30 +1,62 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { supabase } from '../lib/supabase'
+import { supabase, nombreMes, mesActual } from '../lib/supabase'
 
 export default function InformarTransferenciaModal({ depto, mesInfo, onClose, onEnviado }) {
   const [notas, setNotas] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [meses, setMeses] = useState([])
+  const [seleccionados, setSeleccionados] = useState(() => (mesInfo?.id ? [mesInfo.id] : []))
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    async function cargarMeses() {
+      const { anio, mes } = mesActual()
+      const { data } = await supabase
+        .from('meses')
+        .select('*')
+        .order('anio', { ascending: false })
+        .order('mes', { ascending: false })
+      // Solo meses hasta el actual (no futuros)
+      const filtrados = (data || []).filter(
+        (m) => m.anio < anio || (m.anio === anio && m.mes <= mes),
+      )
+      setMeses(filtrados)
+      setCargando(false)
+    }
+    cargarMeses()
+  }, [])
+
+  function toggleMes(id) {
+    setSeleccionados((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!mesInfo?.id) {
-      toast.error('Todavía no se definió el monto de expensas de este mes')
+    if (seleccionados.length === 0) {
+      toast.error('Elegí al menos un mes')
       return
     }
     setEnviando(true)
-    const { error } = await supabase.from('transferencias').insert({
+    const filas = seleccionados.map((mes_id) => ({
       depto_id: depto.id,
-      mes_id: mesInfo.id,
+      mes_id,
       notas: notas.trim() || null,
       estado: 'pendiente',
-    })
+    }))
+    const { error } = await supabase.from('transferencias').insert(filas)
     setEnviando(false)
     if (error) {
       toast.error('No se pudo enviar el aviso')
       return
     }
-    toast.success('Aviso enviado. El administrador registrará el pago.')
+    toast.success(
+      seleccionados.length === 1
+        ? 'Aviso enviado. El administrador registrará el pago.'
+        : `Aviso enviado por ${seleccionados.length} meses. El administrador los registrará.`,
+    )
     onEnviado?.()
     onClose()
   }
@@ -34,9 +66,41 @@ export default function InformarTransferenciaModal({ depto, mesInfo, onClose, on
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
         <h3 className="text-base font-semibold text-slate-800 mb-1">Informar transferencia</h3>
         <p className="text-sm text-slate-500 mb-4">
-          El administrador recibirá el aviso y registrará el pago.
+          Elegí a qué mes o meses corresponde. El administrador recibirá el aviso y registrará el pago.
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-2">
+              Mes/es que estás pagando
+            </label>
+            {cargando ? (
+              <p className="text-sm text-slate-400">Cargando meses...</p>
+            ) : meses.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                Todavía no hay meses con expensas definidas.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                {meses.map((m) => {
+                  const activo = seleccionados.includes(m.id)
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => toggleMes(m.id)}
+                      className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition ${
+                        activo
+                          ? 'bg-tinta text-white border-tinta'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-tinta/40'
+                      }`}
+                    >
+                      {nombreMes(m.mes, m.anio)}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1">
               Nota adicional (opcional)
@@ -44,7 +108,7 @@ export default function InformarTransferenciaModal({ depto, mesInfo, onClose, on
             <textarea
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
-              rows={3}
+              rows={2}
               placeholder="Ej: Transferí el 30/06 a las 10hs"
               className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
             />
