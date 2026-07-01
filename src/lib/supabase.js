@@ -62,3 +62,16 @@ export function calcularEstado({ tienePago, anio, mes }) {
 export function nombreMes(mes, anio) {
   return `${MESES_NOMBRE[mes - 1]} ${anio}`
 }
+
+// Muestra la fecha de un pago en dd/mm/aaaa evitando el corrimiento de día por
+// zona horaria: los valores "solo fecha" (YYYY-MM-DD) o guardados como
+// medianoche UTC se muestran tal cual (un pago del 1/7 no se ve como 30/6).
+export function fechaCorta(valor) {
+  if (!valor) return '-'
+  const s = String(valor)
+  const d = new Date(s)
+  if (isNaN(d.getTime())) return s
+  const esDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(s)
+  const esMedianocheUTC = /T00:00:00(\.\d+)?(Z|\+00:?00)$/.test(s)
+  return d.toLocaleDateString('es-AR', esDateOnly || esMedianocheUTC ? { timeZone: 'UTC' } : undefined)
+}

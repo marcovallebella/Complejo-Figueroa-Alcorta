@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { supabase, calcularEstado, mesActual, nombreMes } from '../lib/supabase'
+import { supabase, calcularEstado, mesActual, nombreMes, fechaCorta } from '../lib/supabase'
 import PaymentStatusCard from './PaymentStatusCard'
 import TablaDeudaComplejo from './TablaDeudaComplejo'
 import InformarTransferenciaModal from './InformarTransferenciaModal'
@@ -214,7 +214,7 @@ export default function UserPanel({ departamento }) {
                     {historial.map((p) => (
                       <tr key={p.id}>
                         <td className="px-4 py-3">{p.meses ? nombreMes(p.meses.mes, p.meses.anio) : '-'}</td>
-                        <td className="px-4 py-3">{new Date(p.fecha_pago).toLocaleDateString('es-AR')}</td>
+                        <td className="px-4 py-3">{fechaCorta(p.fecha_pago)}</td>
                         <td className="px-4 py-3 capitalize">{p.metodo_pago}</td>
                         <td className="px-4 py-3 capitalize">{p.estado}</td>
                         <td className="px-4 py-3">

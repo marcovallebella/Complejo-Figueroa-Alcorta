@@ -23,12 +23,15 @@ const ROL_LABEL = {
   admin: { txt: 'Administrador', clases: 'bg-purple-100 text-purple-700' },
   residente: { txt: 'Residente', clases: 'bg-blue-100 text-blue-700' },
   propietario: { txt: 'Propietario', clases: 'bg-amber-100 text-amber-700' },
+  sin_perfil: { txt: 'Sin perfil', clases: 'bg-slate-100 text-slate-500' },
 }
 
 // Modal de edición de un usuario existente.
 function EditarUsuarioModal({ usuario, deptos, esSuperAdmin, onClose, onGuardado }) {
   const [email, setEmail] = useState(usuario.email || '')
-  const [rol, setRol] = useState(usuario.rol)
+  const [rol, setRol] = useState(
+    ['residente', 'propietario', 'admin'].includes(usuario.rol) ? usuario.rol : 'residente',
+  )
   const [deptoId, setDeptoId] = useState(() => {
     const d = deptos.find((x) => x.nombre === usuario.depto)
     return d ? String(d.id) : String(deptos[0]?.id || '')
