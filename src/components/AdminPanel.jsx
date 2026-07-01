@@ -190,7 +190,7 @@ export default function AdminPanel() {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <aside className="lg:w-56 shrink-0">
-        <nav className="bg-white border border-tinta/10 rounded-2xl p-2 flex lg:flex-col gap-1">
+        <nav className="bg-white border border-tinta/10 rounded-2xl p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible [&>button]:shrink-0 [&>button]:whitespace-nowrap">
           <button
             onClick={() => setModulo('pagos')}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition ${

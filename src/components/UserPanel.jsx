@@ -13,6 +13,7 @@ export default function UserPanel({ departamento }) {
   const [pagoActual, setPagoActual] = useState(null)
   const [historial, setHistorial] = useState([])
   const [mesesAdeudados, setMesesAdeudados] = useState(0)
+  const [deudaAcumulada, setDeudaAcumulada] = useState(0)
   const [cargando, setCargando] = useState(true)
   const [modalTransferenciaAbierto, setModalTransferenciaAbierto] = useState(false)
   const [modulo, setModulo] = useState('expensas') // 'expensas' | 'gastos' | 'balance' | 'reclamos'
@@ -50,15 +51,18 @@ export default function UserPanel({ departamento }) {
       .order('mes')
 
     let pendientes = 0
+    let deuda = 0
     for (const m of todosMeses || []) {
       const esActual = m.anio === anio && m.mes === mes
       const pago = pagosDepto?.find((p) => p.mes_id === m.id)
       const estado = calcularEstado({ tienePago: Boolean(pago), anio: m.anio, mes: m.mes })
       if (!esActual && estado !== 'pagado' && (estado === 'vencido' || m.anio < anio || (m.anio === anio && m.mes < mes))) {
         pendientes += 1
+        deuda += Number(m.monto_expensa || 0)
       }
     }
     setMesesAdeudados(pendientes)
+    setDeudaAcumulada(deuda)
 
     setCargando(false)
   }, [departamento.id])
@@ -129,7 +133,7 @@ export default function UserPanel({ departamento }) {
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       <aside className="lg:w-56 shrink-0">
-        <nav className="bg-white border border-tinta/10 rounded-2xl p-2 flex lg:flex-col gap-1">
+        <nav className="bg-white border border-tinta/10 rounded-2xl p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible [&>button]:shrink-0 [&>button]:whitespace-nowrap">
           {botones.map((b) => (
             <button
               key={b.id}
@@ -150,6 +154,30 @@ export default function UserPanel({ departamento }) {
       <div className="flex-1 min-w-0">
         {modulo === 'expensas' && (
           <div className="space-y-8">
+            {deudaAcumulada > 0 ? (
+              <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <p className="text-sm font-semibold text-red-700">
+                    Tenés una deuda de ${deudaAcumulada.toLocaleString('es-AR')}
+                  </p>
+                  <p className="text-xs text-red-600/80">
+                    {mesesAdeudados} {mesesAdeudados === 1 ? 'mes pendiente' : 'meses pendientes'} de meses anteriores. Por favor regularizá tu situación.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+                <span className="text-2xl">✅</span>
+                <div>
+                  <p className="text-sm font-semibold text-green-700">Estás al día</p>
+                  <p className="text-xs text-green-600/80">
+                    No tenés deuda de meses anteriores. ¡Gracias!
+                  </p>
+                </div>
+              </div>
+            )}
+
             <PaymentStatusCard
               mesActualInfo={mesInfo}
               estadoActual={estadoActual}

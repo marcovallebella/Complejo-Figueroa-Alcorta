@@ -12,7 +12,7 @@ export default function TransferenciasPanel({ departamentos }) {
   const cargar = useCallback(async () => {
     let query = supabase
       .from('transferencias')
-      .select('*, departamentos(*), meses(*)')
+      .select('*, departamentos(*), meses(*), extraordinarias(*)')
       .order('created_at', { ascending: false })
     if (!verProcesadas) query = query.eq('estado', 'pendiente')
     const { data } = await query
@@ -36,6 +36,41 @@ export default function TransferenciasPanel({ departamentos }) {
     else cargar()
   }
 
+  // Registra el pago de una expensa extraordinaria a partir del aviso.
+  async function registrarExtra(t) {
+    const extra = t.extraordinarias
+    if (!extra) {
+      toast.error('No se encontró la expensa extraordinaria')
+      return
+    }
+    // ¿ya está registrado el pago de esa unidad?
+    const { data: yaPago } = await supabase
+      .from('pagos_extraordinarios')
+      .select('id')
+      .eq('extraordinaria_id', extra.id)
+      .eq('depto_id', t.depto_id)
+      .maybeSingle()
+
+    if (!yaPago) {
+      const afectados = extra.afecta_deptos?.length || departamentos.length
+      const cuota = afectados ? Number(extra.monto) / afectados : 0
+      const { error } = await supabase.from('pagos_extraordinarios').insert({
+        extraordinaria_id: extra.id,
+        depto_id: t.depto_id,
+        monto: cuota,
+        fecha_pago: new Date().toISOString(),
+        metodo_pago: 'transferencia',
+        estado: 'pagado',
+      })
+      if (error) {
+        toast.error('No se pudo registrar el pago')
+        return
+      }
+    }
+    await marcarProcesada(t.id)
+    toast.success('Pago de extraordinaria registrado')
+  }
+
   const pendientes = transferencias.filter((t) => t.estado === 'pendiente').length
 
   return (
@@ -49,7 +84,8 @@ export default function TransferenciasPanel({ departamentos }) {
         )}
       </div>
       <p className="text-sm text-slate-500 mb-5">
-        Avisos enviados por residentes. Registrá el pago para confirmar cada transferencia.
+        Avisos enviados por residentes (expensas comunes) y propietarios (extraordinarias).
+        Registrá el pago para confirmar cada transferencia.
       </p>
 
       <div className="flex justify-end mb-4">
@@ -78,13 +114,24 @@ export default function TransferenciasPanel({ departamentos }) {
             >
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
-                  <p className="font-medium text-slate-700">
-                    {t.departamentos?.nombre || '—'}
-                    <span className="text-slate-400 font-normal"> · </span>
-                    <span className="text-slate-500 font-normal text-sm">
-                      {t.meses ? nombreMes(t.meses.mes, t.meses.anio) : '—'}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                      t.tipo === 'extraordinaria'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {t.tipo === 'extraordinaria' ? 'Extraordinaria' : 'Común'}
                     </span>
-                  </p>
+                    <p className="font-medium text-slate-700">
+                      {t.departamentos?.nombre || '—'}
+                      <span className="text-slate-400 font-normal"> · </span>
+                      <span className="text-slate-500 font-normal text-sm">
+                        {t.tipo === 'extraordinaria'
+                          ? (t.extraordinarias?.razon || 'Expensa extraordinaria')
+                          : (t.meses ? nombreMes(t.meses.mes, t.meses.anio) : '—')}
+                      </span>
+                    </p>
+                  </div>
                   <p className="text-xs text-slate-400 mt-0.5">
                     {new Date(t.created_at).toLocaleDateString('es-AR')}{' '}
                     {new Date(t.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
@@ -105,7 +152,7 @@ export default function TransferenciasPanel({ departamentos }) {
               {t.estado === 'pendiente' && (
                 <div className="flex gap-2 mt-4 flex-wrap">
                   <button
-                    onClick={() => setProcesando(t)}
+                    onClick={() => (t.tipo === 'extraordinaria' ? registrarExtra(t) : setProcesando(t))}
                     className="bg-tinta hover:opacity-90 text-white text-xs font-medium px-4 py-2 rounded-lg transition"
                   >
                     Registrar pago

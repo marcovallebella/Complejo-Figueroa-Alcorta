@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import MetaBar from './MetaBar'
 import EstadoBadge from './EstadoBadge'
+import InformarTransferenciaExtraModal from './InformarTransferenciaExtraModal'
 import { generarReciboExtraordinaria, enviarReciboPropietario } from '../lib/recibo'
 
 // Módulo de expensas extraordinarias (caja separada del fondo común).
@@ -21,6 +22,7 @@ export default function ExtraordinariasPanel({ editable = false, miDeptoId = nul
   const [unidadesSel, setUnidadesSel] = useState(null) // null = aún no inicializado
   const [creando, setCreando] = useState(false)
   const [expandidas, setExpandidas] = useState(() => new Set())
+  const [informando, setInformando] = useState(null) // { extra, depto } para el modal del propietario
 
   const cargar = useCallback(async () => {
     const [ex, d, pe, pr] = await Promise.all([
@@ -313,14 +315,23 @@ export default function ExtraordinariasPanel({ editable = false, miDeptoId = nul
                                     </>
                                   )}
                                 </div>
+                              ) : pago ? (
+                                <div className="flex justify-end">
+                                  <button
+                                    onClick={() => generarReciboExtraordinaria({ extra, depto, pago })}
+                                    className="text-tinta underline underline-offset-2 hover:opacity-70 text-xs font-medium"
+                                  >
+                                    Recibo
+                                  </button>
+                                </div>
                               ) : (
-                                pago && (
+                                esMio && (
                                   <div className="flex justify-end">
                                     <button
-                                      onClick={() => generarReciboExtraordinaria({ extra, depto, pago })}
-                                      className="text-tinta underline underline-offset-2 hover:opacity-70 text-xs font-medium"
+                                      onClick={() => setInformando({ extra, depto })}
+                                      className="bg-tinta hover:opacity-90 text-white text-xs font-medium px-3 py-1.5 rounded-lg"
                                     >
-                                      Recibo
+                                      Informar transferencia
                                     </button>
                                   </div>
                                 )
@@ -337,6 +348,15 @@ export default function ExtraordinariasPanel({ editable = false, miDeptoId = nul
           )
         })}
       </div>
+
+      {informando && (
+        <InformarTransferenciaExtraModal
+          depto={informando.depto}
+          extra={informando.extra}
+          onClose={() => setInformando(null)}
+          onEnviado={cargar}
+        />
+      )}
     </section>
   )
 }

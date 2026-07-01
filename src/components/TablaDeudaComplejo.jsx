@@ -89,41 +89,58 @@ export default function TablaDeudaComplejo({ editable = false }) {
 
   const esHoy = vistaAnio === anioHoy && vistaMes === mesHoy
 
+  // Último monto de expensa definido (para heredarlo cuando se marca un pago
+  // en un mes que todavía no tiene monto propio, y no quede en $0).
+  async function ultimoMontoDefinido() {
+    const { data } = await supabase
+      .from('meses')
+      .select('monto_expensa')
+      .gt('monto_expensa', 0)
+      .order('anio', { ascending: false })
+      .order('mes', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    return Number(data?.monto_expensa || 0)
+  }
+
   async function toggle(fila) {
     if (!editable) return
     setGuardando(fila.depto.id)
     try {
-      let mesRow = mesSelRow
-      if (!mesRow) {
-        const { data, error } = await supabase
-          .from('meses')
-          .insert({ anio: vistaAnio, mes: vistaMes, monto_expensa: 0 })
-          .select()
-          .single()
-        if (error) {
-          toast.error('No se pudo crear el período')
-          return
-        }
-        mesRow = data
-      }
-
       if (fila.pagoSel) {
         const { error } = await supabase.from('pagos').delete().eq('id', fila.pagoSel.id)
         if (error) { toast.error('No se pudo actualizar'); return }
         toast.success(`${fila.depto.nombre}: marcado como pendiente`)
-      } else {
-        const { error } = await supabase.from('pagos').insert({
-          depto_id: fila.depto.id,
-          mes_id: mesRow.id,
-          fecha_pago: new Date().toISOString(),
-          metodo_pago: 'efectivo',
-          monto: Number(mesRow.monto_expensa || 0),
-          estado: 'pagado',
-          registrado_por: 'admin',
-        })
-        if (error) { toast.error('No se pudo actualizar'); return }
-        toast.success(`${fila.depto.nombre}: marcado como pagado`)
+        cargar()
+        return
       }
+
+      // Marcar como pagado: aseguramos que exista el período con un monto válido.
+      let mesRow = mesSelRow
+      const fallback = await ultimoMontoDefinido()
+      if (!mesRow) {
+        const { data, error } = await supabase
+          .from('meses')
+          .insert({ anio: vistaAnio, mes: vistaMes, monto_expensa: fallback })
+          .select()
+          .single()
+        if (error) { toast.error('No se pudo crear el período'); return }
+        mesRow = data
+      }
+
+      const montoPago = Number(mesRow.monto_expensa) > 0 ? Number(mesRow.monto_expensa) : fallback
+
+      const { error } = await supabase.from('pagos').insert({
+        depto_id: fila.depto.id,
+        mes_id: mesRow.id,
+        fecha_pago: new Date().toISOString(),
+        metodo_pago: 'efectivo',
+        monto: montoPago,
+        estado: 'pagado',
+        registrado_por: 'admin',
+      })
+      if (error) { toast.error('No se pudo actualizar'); return }
+      toast.success(`${fila.depto.nombre}: marcado como pagado`)
       cargar()
     } finally {
       setGuardando(null)
