@@ -11,6 +11,7 @@ import ExtraordinariasPanel from './ExtraordinariasPanel'
 import ReclamosPanel from './ReclamosPanel'
 import TransferenciasPanel from './TransferenciasPanel'
 import UsuariosPanel from './UsuariosPanel'
+import TablaDeudaComplejo from './TablaDeudaComplejo'
 import { generarRecibo } from '../lib/recibo'
 import { descargarCSV } from '../lib/csv'
 
@@ -299,7 +300,7 @@ export default function AdminPanel() {
             <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            Reclamos
+            Reclamos y proyectos
           </button>
           <button
             onClick={() => setModulo('usuarios')}
@@ -322,7 +323,7 @@ export default function AdminPanel() {
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-semibold text-slate-700">
-                  Resumen de {nombreMes(mes, anio)}
+                  Registro de pagos
                 </h2>
           <button
             onClick={() => setModalAbierto(true)}
@@ -332,69 +333,7 @@ export default function AdminPanel() {
           </button>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-left">
-                <th className="px-4 py-3 font-medium">Depto</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Fecha de pago</th>
-                <th className="px-4 py-3 font-medium">Morosidad</th>
-                <th className="px-4 py-3 font-medium text-right">Total adeudado</th>
-                <th className="px-4 py-3 font-medium w-10"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {departamentos.map((d) => {
-                const pago = pagosMes.find((p) => p.depto_id === d.id)
-                const estado = calcularEstado({ tienePago: Boolean(pago), anio, mes })
-                const esMoroso = morosos.includes(d.id)
-                return (
-                  <tr key={d.id} className={esMoroso ? 'bg-red-50' : ''}>
-                    <td className="px-4 py-3 font-medium text-slate-700">{d.nombre}</td>
-                    <td className="px-4 py-3"><EstadoBadge estado={estado} /></td>
-                    <td className="px-4 py-3">{pago ? new Date(pago.fecha_pago).toLocaleDateString('es-AR') : '-'}</td>
-                    <td className="px-4 py-3">
-                      {esMoroso && <span className="text-red-600 font-medium text-xs">⚠ 2+ meses</span>}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap font-medium">
-                      {deudaPorDepto[d.id] > 0 ? (
-                        <span className="text-red-600">
-                          ${Number(deudaPorDepto[d.id]).toLocaleString('es-AR')}
-                        </span>
-                      ) : (
-                        <span className="text-green-600">$0</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {pago && (
-                        <button
-                          onClick={() => eliminarPago(pago, d.nombre)}
-                          aria-label="Eliminar pago"
-                          title="Eliminar pago (vuelve a quedar pendiente)"
-                          className="text-slate-400 hover:text-red-600 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="bg-slate-50 font-semibold text-tinta border-t-2 border-slate-200">
-                <td className="px-4 py-3" colSpan={4}>
-                  Total adeudado del complejo
-                </td>
-                <td className="px-4 py-3 text-right whitespace-nowrap text-red-600">
-                  ${totalAdeudadoComplejo.toLocaleString('es-AR')}
-                </td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <TablaDeudaComplejo editable />
       </section>
 
       <section className="bg-white border border-slate-100 rounded-2xl p-6 max-w-md">
