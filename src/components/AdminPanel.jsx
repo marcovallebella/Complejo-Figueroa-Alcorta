@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { supabase, calcularEstado, mesActual, nombreMes } from '../lib/supabase'
 import EstadoBadge from './EstadoBadge'
+import PaymentTable from './PaymentTable'
 import RegisterPaymentModal from './RegisterPaymentModal'
 import PersonasPanel from './PersonasPanel'
 import EgresosPanel from './EgresosPanel'
@@ -404,6 +405,11 @@ export default function AdminPanel() {
             Guardar
           </button>
         </form>
+      </section>
+
+      <section>
+        <h3 className="text-sm font-semibold text-slate-600 mb-3">Estado general del complejo</h3>
+        <PaymentTable mostrarMontos />
       </section>
 
       <section>
