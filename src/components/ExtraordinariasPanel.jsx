@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { supabase } from '../lib/supabase'
+import { supabase, fechaCorta } from '../lib/supabase'
 import MetaBar from './MetaBar'
 import EstadoBadge from './EstadoBadge'
 import InformarTransferenciaExtraModal from './InformarTransferenciaExtraModal'
@@ -343,7 +343,7 @@ export default function ExtraordinariasPanel({ editable = false, miDeptoId = nul
                               <EstadoBadge estado={pago ? 'pagado' : 'pendiente'} />
                             </td>
                             <td className="px-4 py-3">
-                              {pago ? new Date(pago.fecha_pago).toLocaleDateString('es-AR') : '—'}
+                              {pago ? fechaCorta(pago.fecha_pago) : '—'}
                             </td>
                             <td className="px-4 py-3">
                               {editable ? (

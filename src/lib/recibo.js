@@ -5,7 +5,7 @@
 // dependencias externas: arma un HTML con estilos embebidos y dispara la
 // impresión del navegador (desde ahí se puede "Guardar como PDF").
 
-import { nombreMes, supabase } from './supabase'
+import { nombreMes, supabase, fechaCorta } from './supabase'
 
 function fila(label, valor) {
   return `
@@ -42,7 +42,7 @@ export async function generarRecibo({ pago, depto, mes }) {
 
   const numero = String(pago.id ?? 0).padStart(6, '0')
   const emision = new Date().toLocaleDateString('es-AR')
-  const fechaPago = new Date(pago.fecha_pago).toLocaleDateString('es-AR')
+  const fechaPago = fechaCorta(pago.fecha_pago)
   const periodo = mes ? nombreMes(mes.mes, mes.anio) : '—'
   const nombres = residentes.map((r) => r.nombre).filter(Boolean)
   const emails = residentes.map((r) => r.email).filter(Boolean)
@@ -155,7 +155,7 @@ export async function generarReciboExtraordinaria({ extra, depto, pago }) {
 
   const numero = 'EXT-' + String(pago.id ?? 0).padStart(5, '0')
   const emision = new Date().toLocaleDateString('es-AR')
-  const fechaPago = new Date(pago.fecha_pago).toLocaleDateString('es-AR')
+  const fechaPago = fechaCorta(pago.fecha_pago)
   const nombres = propietarios.map((p) => p.nombre).filter(Boolean)
   const emails = propietarios.map((p) => p.email).filter(Boolean)
   const propietario = nombres.length ? nombres.join(', ') : '—'

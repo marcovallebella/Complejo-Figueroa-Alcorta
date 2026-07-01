@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { supabase, calcularEstado, nombreMes, mesActual } from '../lib/supabase'
+import { supabase, calcularEstado, nombreMes, mesActual, fechaCorta } from '../lib/supabase'
 import EstadoBadge from './EstadoBadge'
 
 // Tabla general: Depto 1..18 x últimos 3 meses + mes actual.
@@ -105,7 +105,7 @@ export default function PaymentTable({ mostrarMontos = false }) {
                       {mostrarMontos && pago && (
                         <span className="text-xs text-slate-400">
                           ${Number(pago.monto).toLocaleString('es-AR')} ·{' '}
-                          {new Date(pago.fecha_pago).toLocaleDateString('es-AR')}
+                          {fechaCorta(pago.fecha_pago)}
                         </span>
                       )}
                     </div>

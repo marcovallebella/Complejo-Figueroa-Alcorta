@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { supabase, calcularEstado, mesActual, nombreMes } from '../lib/supabase'
+import { supabase, calcularEstado, mesActual, nombreMes, fechaCorta } from '../lib/supabase'
 import EstadoBadge from './EstadoBadge'
 import PaymentTable from './PaymentTable'
 import RegisterPaymentModal from './RegisterPaymentModal'
@@ -146,7 +146,7 @@ export default function AdminPanel() {
     const filas = historial.map((p) => [
       p.departamentos?.nombre || '',
       p.meses ? nombreMes(p.meses.mes, p.meses.anio) : '',
-      new Date(p.fecha_pago).toLocaleDateString('es-AR'),
+      fechaCorta(p.fecha_pago),
       p.metodo_pago,
       Number(p.monto || 0).toFixed(2),
       p.estado,
@@ -425,7 +425,7 @@ export default function AdminPanel() {
                 <tr key={p.id}>
                   <td className="px-4 py-3">{p.departamentos?.nombre}</td>
                   <td className="px-4 py-3">{p.meses ? nombreMes(p.meses.mes, p.meses.anio) : '-'}</td>
-                  <td className="px-4 py-3">{new Date(p.fecha_pago).toLocaleDateString('es-AR')}</td>
+                  <td className="px-4 py-3">{fechaCorta(p.fecha_pago)}</td>
                   <td className="px-4 py-3 capitalize">{p.metodo_pago}</td>
                   <td className="px-4 py-3 capitalize">{p.estado}</td>
                   <td className="px-4 py-3 capitalize">{p.registrado_por}</td>
