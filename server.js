@@ -17,6 +17,16 @@ app.post('/api/send-receipt', async (req, res) => {
   }
 })
 
+app.post('/api/gestionar-usuarios', async (req, res) => {
+  try {
+    const { default: handler } = await import('./api/gestionar-usuarios.js')
+    return handler(req, res)
+  } catch (err) {
+    console.error('Error en /api/gestionar-usuarios:', err)
+    return res.status(500).json({ error: 'Backend de usuarios no configurado' })
+  }
+})
+
 const distPath = path.join(__dirname, 'dist')
 app.use(express.static(distPath))
 
