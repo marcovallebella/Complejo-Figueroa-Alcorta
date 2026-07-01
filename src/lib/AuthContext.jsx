@@ -3,6 +3,10 @@ import { supabase } from './supabase'
 
 const AuthContext = createContext(null)
 
+// Email del super admin (siempre tiene acceso, aunque no figure en ninguna
+// tabla). El resto de los admins se definen en la tabla `administradores`.
+const SUPER_ADMIN_EMAIL = 'marcoluisvallebella@gmail.com'
+
 // Tres tipos de cuenta, determinados por la asociación del user_id:
 //   - residente  -> existe en `departamentos` (user_id = uid)
 //   - propietario -> existe en `propietarios` (user_id = uid)
@@ -98,8 +102,18 @@ export function AuthProvider({ children }) {
         return
       }
 
-      // Si no es residente ni propietario -> admin
-      setRol('admin')
+      // ¿Administrador? SOLO si está en la lista explícita de administradores
+      // (o es el super admin). Una cuenta sin rol NO es admin por descarte:
+      // queda "sin perfil". Así, borrar la ficha de un propietario no lo
+      // convierte sin querer en administrador con acceso total.
+      const email = (session?.user?.email || '').toLowerCase()
+      let esAdminExplicito = email === SUPER_ADMIN_EMAIL
+      if (!esAdminExplicito) {
+        const { data: admins } = await supabase.from('administradores').select('email')
+        esAdminExplicito = (admins || []).some((a) => (a.email || '').toLowerCase() === email)
+      }
+
+      setRol(esAdminExplicito ? 'admin' : 'sinPerfil')
       setDepartamento(null)
       setPropietario(null)
       setCargandoPerfil(false)
