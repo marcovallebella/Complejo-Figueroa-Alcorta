@@ -46,12 +46,12 @@ async function infoUsuario(admin, userId) {
   const { data } = await admin.auth.admin.getUserById(userId)
   const email = data?.user?.email || null
   const [{ data: dep }, { data: prp }] = await Promise.all([
-    admin.from('departamentos').select('id').eq('user_id', userId).maybeSingle(),
-    admin.from('propietarios').select('id').eq('user_id', userId).maybeSingle(),
+    admin.from('departamentos').select('id').eq('user_id', userId).limit(1),
+    admin.from('propietarios').select('id').eq('user_id', userId).limit(1),
   ])
   let rol = 'admin'
-  if (dep) rol = 'residente'
-  else if (prp) rol = 'propietario'
+  if (dep?.length) rol = 'residente'
+  else if (prp?.length) rol = 'propietario'
   return { email, rol }
 }
 
@@ -160,12 +160,23 @@ export default async function handler(req, res) {
           await admin.from('residentes').insert({ depto_id: deptoId, nombre: nombre.trim(), email })
         }
       } else if (rol === 'propietario') {
-        await admin.from('propietarios').insert({
-          depto_id: deptoId,
-          nombre: nombre?.trim() || '',
-          email,
-          user_id: uid,
-        })
+        // Reutiliza una ficha de propietario sin cuenta para ese depto (evita
+        // crear filas duplicadas); si no hay ninguna, inserta una nueva.
+        const { data: existente } = await admin
+          .from('propietarios')
+          .select('id')
+          .eq('depto_id', deptoId)
+          .is('user_id', null)
+          .limit(1)
+          .maybeSingle()
+        if (existente) {
+          await admin.from('propietarios')
+            .update({ user_id: uid, email, nombre: nombre?.trim() || '' })
+            .eq('id', existente.id)
+        } else {
+          await admin.from('propietarios')
+            .insert({ depto_id: deptoId, nombre: nombre?.trim() || '', email, user_id: uid })
+        }
       }
       return res.status(200).json({ ok: true, id: uid })
     }

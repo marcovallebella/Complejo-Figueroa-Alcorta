@@ -57,12 +57,16 @@ export function AuthProvider({ children }) {
 
       setCargandoPerfil(true)
 
-      // ¿Residente?
-      const { data: depto } = await supabase
+      // ¿Residente? Usamos limit(1) en vez de maybeSingle() para que, si por
+      // algún motivo hay filas duplicadas, no falle la detección de rol (con
+      // maybeSingle un duplicado da error y caería en admin por descarte).
+      const { data: deptoRows } = await supabase
         .from('departamentos')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle()
+        .order('id')
+        .limit(1)
+      const depto = deptoRows?.[0]
 
       if (depto) {
         setRol('residente')
@@ -73,11 +77,13 @@ export function AuthProvider({ children }) {
       }
 
       // ¿Propietario?
-      const { data: prop } = await supabase
+      const { data: propRows } = await supabase
         .from('propietarios')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle()
+        .order('id')
+        .limit(1)
+      const prop = propRows?.[0]
 
       if (prop) {
         const { data: deptoProp } = await supabase
