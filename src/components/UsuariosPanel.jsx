@@ -36,7 +36,6 @@ function EditarUsuarioModal({ usuario, deptos, esSuperAdmin, onClose, onGuardado
     const d = deptos.find((x) => x.nombre === usuario.depto)
     return d ? String(d.id) : String(deptos[0]?.id || '')
   })
-  const [nombre, setNombre] = useState('')
   const [guardando, setGuardando] = useState(false)
 
   const necesitaDepto = rol === 'residente' || rol === 'propietario'
@@ -54,7 +53,6 @@ function EditarUsuarioModal({ usuario, deptos, esSuperAdmin, onClose, onGuardado
         email: email.trim(),
         rol,
         deptoId: rol === 'admin' ? null : Number(deptoId),
-        nombre,
       })
       toast.success('Usuario actualizado')
       onGuardado()
@@ -105,20 +103,6 @@ function EditarUsuarioModal({ usuario, deptos, esSuperAdmin, onClose, onGuardado
               </select>
             </div>
           )}
-          {necesitaDepto && (
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">
-                Nombre (opcional)
-              </label>
-              <input
-                type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Nombre y apellido"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-              />
-            </div>
-          )}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -153,7 +137,6 @@ export default function UsuariosPanel() {
   const [password, setPassword] = useState('')
   const [rol, setRol] = useState('residente')
   const [deptoId, setDeptoId] = useState('')
-  const [nombre, setNombre] = useState('')
   const [creando, setCreando] = useState(false)
 
   const cargar = useCallback(async () => {
@@ -193,12 +176,10 @@ export default function UsuariosPanel() {
         password,
         rol,
         deptoId: rol === 'admin' ? null : Number(deptoId),
-        nombre,
       })
       toast.success('Usuario creado')
       setEmail('')
       setPassword('')
-      setNombre('')
       cargar()
     } catch (err) {
       toast.error(err.message)
@@ -292,19 +273,10 @@ export default function UsuariosPanel() {
               </select>
             </div>
           )}
-          <div className={necesitaDepto ? 'sm:col-span-2' : ''}>
-            <label className="block text-xs font-medium text-slate-500 mb-1">
-              Nombre (opcional)
-            </label>
-            <input
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Nombre y apellido"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-            />
-          </div>
         </div>
+        <p className="text-xs text-slate-400">
+          Los nombres y emails reales se cargan aparte, en los módulos Residentes / Propietarios.
+        </p>
         <button
           type="submit"
           disabled={creando}
