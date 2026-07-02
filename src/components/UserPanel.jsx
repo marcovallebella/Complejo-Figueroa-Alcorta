@@ -248,7 +248,6 @@ export default function UserPanel({ departamento }) {
       {modalTransferenciaAbierto && (
         <InformarTransferenciaModal
           depto={departamento}
-          mesInfo={mesInfo}
           onClose={() => setModalTransferenciaAbierto(false)}
           onEnviado={cargarDatos}
         />
