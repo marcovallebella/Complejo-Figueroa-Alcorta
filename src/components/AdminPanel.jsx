@@ -24,8 +24,10 @@ export default function AdminPanel() {
   const [morosos, setMorosos] = useState([])
   const [historial, setHistorial] = useState([])
   const [filtroDepto, setFiltroDepto] = useState('')
-  const [filtroAnio, setFiltroAnio] = useState('')
-  const [filtroMes, setFiltroMes] = useState('')
+  const [filtroPeriodo, setFiltroPeriodo] = useState(() => {
+    const { anio: a, mes: m } = mesActual()
+    return `${a}-${m}` // "2026-7" — mes corriente por defecto
+  })
   const [modalAbierto, setModalAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [modulo, setModulo] = useState('pagos') // 'pagos' | 'transferencias' | 'residentes' | 'propietarios' | 'egresos' | 'extraordinarias' | 'balance' | 'reclamos' | 'usuarios'
@@ -86,11 +88,11 @@ export default function AdminPanel() {
     let query = supabase.from('pagos').select('*, departamentos(*), meses(*)').order('fecha_pago', { ascending: false })
     if (filtroDepto) query = query.eq('depto_id', filtroDepto)
     const { data } = await query
-    let filtrado = data || []
-    if (filtroAnio) filtrado = filtrado.filter((p) => p.meses?.anio === Number(filtroAnio))
-    if (filtroMes) filtrado = filtrado.filter((p) => p.meses?.mes === Number(filtroMes))
+    const [fAnio, fMes] = filtroPeriodo.split('-').map(Number)
+    // Muestra un solo mes a la vez (el período elegido en la lista desplegable).
+    const filtrado = (data || []).filter((p) => p.meses?.anio === fAnio && p.meses?.mes === fMes)
     setHistorial(filtrado)
-  }, [filtroDepto, filtroAnio, filtroMes])
+  }, [filtroDepto, filtroPeriodo])
 
   const cargarPendientesTransferencias = useCallback(async () => {
     const { count } = await supabase
@@ -385,20 +387,20 @@ export default function AdminPanel() {
               <option key={d.id} value={d.id}>{d.nombre}</option>
             ))}
           </select>
-          <input
-            type="number"
-            placeholder="Año"
-            value={filtroAnio}
-            onChange={(e) => setFiltroAnio(e.target.value)}
-            className="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-          <input
-            type="number"
-            placeholder="Mes (1-12)"
-            value={filtroMes}
-            onChange={(e) => setFiltroMes(e.target.value)}
-            className="w-32 rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
+          <select
+            value={filtroPeriodo}
+            onChange={(e) => setFiltroPeriodo(e.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          >
+            {Array.from({ length: 24 }).map((_, i) => {
+              const base = mesActual()
+              let yy = base.anio
+              let mm = base.mes - i
+              while (mm <= 0) { mm += 12; yy -= 1 }
+              const val = `${yy}-${mm}`
+              return <option key={val} value={val}>{nombreMes(mm, yy)}</option>
+            })}
+          </select>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200">
