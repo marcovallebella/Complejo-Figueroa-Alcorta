@@ -468,7 +468,7 @@ export default function AdminPanel() {
           <PersonasPanel
             tabla="residentes"
             titulo="Registro de residentes"
-            subtitulo="Cada departamento puede tener uno o más residentes. El email se usa para los recibos de pago."
+            subtitulo="Registro de nombres y emails reales de contacto (para los recibos). El acceso y la contraseña se gestionan en el módulo Usuarios."
             etiquetaAgregar="Agregar residente"
           />
         )}
@@ -477,7 +477,7 @@ export default function AdminPanel() {
           <PersonasPanel
             tabla="propietarios"
             titulo="Registro de propietarios"
-            subtitulo="Cada departamento puede tener uno o más propietarios. El email se usa para los recibos de expensas extraordinarias."
+            subtitulo="Registro de nombres y emails reales de contacto (para los recibos de extraordinarias). El acceso y la contraseña se gestionan en el módulo Usuarios."
             etiquetaAgregar="Agregar propietario"
           />
         )}

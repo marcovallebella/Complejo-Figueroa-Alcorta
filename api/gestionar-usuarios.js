@@ -48,12 +48,15 @@ async function verificarAdmin(admin, req) {
 }
 
 // Devuelve { email, rol } del usuario objetivo (para chequear permisos).
+// El login vive SOLO en departamentos: user_id (residente) y
+// propietario_user_id (propietario). Las tablas residentes/propietarios son
+// solo registro de contacto y no intervienen en el rol.
 async function infoUsuario(admin, userId) {
   const { data } = await admin.auth.admin.getUserById(userId)
   const email = data?.user?.email || null
   const [{ data: dep }, { data: prp }] = await Promise.all([
     admin.from('departamentos').select('id').eq('user_id', userId).limit(1),
-    admin.from('propietarios').select('id').eq('user_id', userId).limit(1),
+    admin.from('departamentos').select('id').eq('propietario_user_id', userId).limit(1),
   ])
   let rol
   if (dep?.length) rol = 'residente'
@@ -63,33 +66,18 @@ async function infoUsuario(admin, userId) {
   return { email, rol }
 }
 
-// Vincula (o desvincula) al usuario según su rol/depto.
-async function revincular(admin, userId, rol, deptoId, email, nombre) {
-  // Primero desvincula de todo
+// Vincula (o desvincula) el login del usuario en la tabla departamentos.
+async function revincular(admin, userId, rol, deptoId) {
+  // Primero desvincula de todo (como residente y como propietario)
   await admin.from('departamentos').update({ user_id: null }).eq('user_id', userId)
-  await admin.from('propietarios').update({ user_id: null }).eq('user_id', userId)
+  await admin.from('departamentos').update({ propietario_user_id: null }).eq('propietario_user_id', userId)
 
   if (rol === 'residente') {
     await admin.from('departamentos').update({ user_id: userId }).eq('id', deptoId)
   } else if (rol === 'propietario') {
-    // Reutiliza una ficha de propietario sin cuenta para ese depto, o crea una.
-    const { data: existente } = await admin
-      .from('propietarios')
-      .select('id')
-      .eq('depto_id', deptoId)
-      .is('user_id', null)
-      .limit(1)
-      .maybeSingle()
-    if (existente) {
-      await admin.from('propietarios')
-        .update({ user_id: userId, email, nombre: nombre?.trim() || '' })
-        .eq('id', existente.id)
-    } else {
-      await admin.from('propietarios')
-        .insert({ depto_id: deptoId, nombre: nombre?.trim() || '', email, user_id: userId })
-    }
+    await admin.from('departamentos').update({ propietario_user_id: userId }).eq('id', deptoId)
   }
-  // admin -> queda sin vincular
+  // admin / sin rol -> queda sin vincular
 }
 
 export default async function handler(req, res) {
@@ -109,9 +97,8 @@ export default async function handler(req, res) {
     // --- LISTAR ---------------------------------------------------------
     if (accion === 'listar') {
       const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 1000 })
-      const [{ data: deptos }, { data: props }, { data: admins }] = await Promise.all([
-        admin.from('departamentos').select('id, nombre, user_id'),
-        admin.from('propietarios').select('id, nombre, user_id, depto_id'),
+      const [{ data: deptos }, { data: admins }] = await Promise.all([
+        admin.from('departamentos').select('id, nombre, user_id, propietario_user_id'),
         admin.from('administradores').select('email'),
       ])
       const adminSet = new Set((admins || []).map((a) => (a.email || '').toLowerCase()))
@@ -120,13 +107,10 @@ export default async function handler(req, res) {
         // El super admin no figura en la lista para nadie
         .filter((u) => (u.email || '').toLowerCase() !== SUPER_ADMIN_EMAIL)
         .map((u) => {
-          const depto = (deptos || []).find((d) => d.user_id === u.id)
-          if (depto) return { id: u.id, email: u.email, rol: 'residente', depto: depto.nombre }
-          const prop = (props || []).find((p) => p.user_id === u.id)
-          if (prop) {
-            const d = (deptos || []).find((dd) => dd.id === prop.depto_id)
-            return { id: u.id, email: u.email, rol: 'propietario', depto: d?.nombre || null }
-          }
+          const deptoRes = (deptos || []).find((d) => d.user_id === u.id)
+          if (deptoRes) return { id: u.id, email: u.email, rol: 'residente', depto: deptoRes.nombre }
+          const deptoProp = (deptos || []).find((d) => d.propietario_user_id === u.id)
+          if (deptoProp) return { id: u.id, email: u.email, rol: 'propietario', depto: deptoProp.nombre }
           const rol = adminSet.has((u.email || '').toLowerCase()) ? 'admin' : 'sin_perfil'
           return { id: u.id, email: u.email, rol, depto: null }
         })
@@ -143,7 +127,7 @@ export default async function handler(req, res) {
 
     // --- CREAR ----------------------------------------------------------
     if (accion === 'crear') {
-      const { email, password, rol, deptoId, nombre } = req.body
+      const { email, password, rol, deptoId } = req.body
       if (!email || !password || !rol) {
         return res.status(400).json({ error: 'Faltan datos (email, contraseña o rol)' })
       }
@@ -167,29 +151,12 @@ export default async function handler(req, res) {
       }
 
       const uid = creado.user.id
+      // El login se registra SOLO en departamentos. Los nombres/emails reales
+      // se cargan aparte desde los módulos Residentes / Propietarios.
       if (rol === 'residente') {
         await admin.from('departamentos').update({ user_id: uid }).eq('id', deptoId)
-        if (nombre?.trim()) {
-          await admin.from('residentes').insert({ depto_id: deptoId, nombre: nombre.trim(), email })
-        }
       } else if (rol === 'propietario') {
-        // Reutiliza una ficha de propietario sin cuenta para ese depto (evita
-        // crear filas duplicadas); si no hay ninguna, inserta una nueva.
-        const { data: existente } = await admin
-          .from('propietarios')
-          .select('id')
-          .eq('depto_id', deptoId)
-          .is('user_id', null)
-          .limit(1)
-          .maybeSingle()
-        if (existente) {
-          await admin.from('propietarios')
-            .update({ user_id: uid, email, nombre: nombre?.trim() || '' })
-            .eq('id', existente.id)
-        } else {
-          await admin.from('propietarios')
-            .insert({ depto_id: deptoId, nombre: nombre?.trim() || '', email, user_id: uid })
-        }
+        await admin.from('departamentos').update({ propietario_user_id: uid }).eq('id', deptoId)
       } else if (rol === 'admin') {
         await admin.from('administradores').upsert({ email }, { onConflict: 'email' })
       }
@@ -198,7 +165,7 @@ export default async function handler(req, res) {
 
     // --- EDITAR ---------------------------------------------------------
     if (accion === 'editar') {
-      const { userId, email, rol, deptoId, nombre } = req.body
+      const { userId, email, rol, deptoId } = req.body
       if (!userId || !rol) return res.status(400).json({ error: 'Faltan datos' })
 
       const objetivo = await infoUsuario(admin, userId)
@@ -224,7 +191,7 @@ export default async function handler(req, res) {
         }
       }
 
-      await revincular(admin, userId, rol, deptoId, email, nombre)
+      await revincular(admin, userId, rol, deptoId)
 
       // Gestionar pertenencia a la lista de administradores: sacamos el email
       // viejo y, si el nuevo rol es admin, agregamos el email actual.

@@ -7,10 +7,12 @@ const AuthContext = createContext(null)
 // tabla). El resto de los admins se definen en la tabla `administradores`.
 const SUPER_ADMIN_EMAIL = 'marcoluisvallebella@gmail.com'
 
-// Tres tipos de cuenta, determinados por la asociación del user_id:
-//   - residente  -> existe en `departamentos` (user_id = uid)
-//   - propietario -> existe en `propietarios` (user_id = uid)
-//   - admin      -> no está asociado a ninguna de las dos
+// El rol se determina por el vínculo de login en `departamentos`:
+//   - residente   -> departamentos.user_id = uid
+//   - propietario -> departamentos.propietario_user_id = uid
+//   - admin       -> el email está en `administradores` (o es el super admin)
+//   - sin perfil  -> ninguna de las anteriores (sin acceso)
+// Las tablas residentes/propietarios son solo registro de contacto.
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined) // undefined = cargando
   const [rol, setRol] = useState(null) // 'admin' | 'residente' | 'propietario'
@@ -61,9 +63,13 @@ export function AuthProvider({ children }) {
 
       setCargandoPerfil(true)
 
-      // ¿Residente? Usamos limit(1) en vez de maybeSingle() para que, si por
-      // algún motivo hay filas duplicadas, no falle la detección de rol (con
-      // maybeSingle un duplicado da error y caería en admin por descarte).
+      // El rol se determina SOLO por el vínculo de login en departamentos:
+      //   user_id             -> residente
+      //   propietario_user_id -> propietario
+      // Las tablas residentes/propietarios son solo registro de contacto y no
+      // intervienen en el rol.
+
+      // ¿Residente?
       const { data: deptoRows } = await supabase
         .from('departamentos')
         .select('*')
@@ -81,23 +87,18 @@ export function AuthProvider({ children }) {
       }
 
       // ¿Propietario?
-      const { data: propRows } = await supabase
-        .from('propietarios')
+      const { data: deptoPropRows } = await supabase
+        .from('departamentos')
         .select('*')
-        .eq('user_id', userId)
+        .eq('propietario_user_id', userId)
         .order('id')
         .limit(1)
-      const prop = propRows?.[0]
+      const deptoProp = deptoPropRows?.[0]
 
-      if (prop) {
-        const { data: deptoProp } = await supabase
-          .from('departamentos')
-          .select('*')
-          .eq('id', prop.depto_id)
-          .maybeSingle()
+      if (deptoProp) {
         setRol('propietario')
-        setPropietario(prop)
-        setDepartamento(deptoProp || null)
+        setPropietario(null)
+        setDepartamento(deptoProp)
         setCargandoPerfil(false)
         return
       }
