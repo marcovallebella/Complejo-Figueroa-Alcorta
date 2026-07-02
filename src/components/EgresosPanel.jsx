@@ -34,13 +34,18 @@ export default function EgresosPanel({ editable = false }) {
   const [enviando, setEnviando] = useState(false)
 
   const cargar = useCallback(async () => {
+    // Rango [primer día del mes, primer día del mes siguiente). Usamos el
+    // inicio del mes siguiente en vez del "día 31" para no armar fechas
+    // inválidas (ej. 2026-06-31 no existe y hacía fallar la consulta).
     const desde = `${vistaAnio}-${String(vistaMes).padStart(2, '0')}-01`
-    const hasta = `${vistaAnio}-${String(vistaMes).padStart(2, '0')}-31`
+    const anioSig = vistaMes === 12 ? vistaAnio + 1 : vistaAnio
+    const mesSig = vistaMes === 12 ? 1 : vistaMes + 1
+    const hasta = `${anioSig}-${String(mesSig).padStart(2, '0')}-01`
     const { data } = await supabase
       .from('egresos')
       .select('*')
       .gte('fecha', desde)
-      .lte('fecha', hasta)
+      .lt('fecha', hasta)
       .order('fecha', { ascending: false })
     setEgresos(data || [])
     setCargando(false)
