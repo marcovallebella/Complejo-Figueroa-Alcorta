@@ -1,4 +1,5 @@
 import EstadoBadge from './EstadoBadge'
+import InfoImportante from './InfoImportante'
 import { nombreMes } from '../lib/supabase'
 
 export default function PaymentStatusCard({
@@ -27,14 +28,17 @@ export default function PaymentStatusCard({
         </div>
       )}
 
-      {estadoActual !== 'pagado' && (
-        <button
-          onClick={onInformarTransferencia}
-          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium py-3 rounded-xl transition"
-        >
-          Informar transferencia
-        </button>
-      )}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {estadoActual !== 'pagado' && (
+          <button
+            onClick={onInformarTransferencia}
+            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium py-3 rounded-xl transition"
+          >
+            Informar transferencia
+          </button>
+        )}
+        <InfoImportante className="flex-1" />
+      </div>
     </div>
   )
 }

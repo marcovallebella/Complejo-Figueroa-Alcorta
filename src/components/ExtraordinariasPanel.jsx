@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { supabase, fechaCorta } from '../lib/supabase'
 import MetaBar from './MetaBar'
 import EstadoBadge from './EstadoBadge'
+import InfoImportante from './InfoImportante'
 import InformarTransferenciaExtraModal from './InformarTransferenciaExtraModal'
 import { generarReciboExtraordinaria, enviarReciboPropietario } from '../lib/recibo'
 
@@ -170,9 +171,15 @@ export default function ExtraordinariasPanel({ editable = false, miDeptoId = nul
   return (
     <section>
       <h2 className="font-serif text-2xl text-tinta mb-1">Expensas extraordinarias</h2>
-      <p className="text-sm text-slate-500 mb-5">
+      <p className="text-sm text-slate-500 mb-3">
         Caja separada del fondo común. La barra muestra el avance de la recaudación hacia la meta.
       </p>
+
+      {!editable && (
+        <div className="mb-5">
+          <InfoImportante />
+        </div>
+      )}
 
       {editable && (
         <form onSubmit={crear} className="bg-white border border-tinta/10 rounded-2xl p-5 mb-6">
