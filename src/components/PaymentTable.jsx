@@ -10,14 +10,23 @@ export default function PaymentTable({ mostrarMontos = false }) {
   const [meses, setMeses] = useState([])
   const [pagos, setPagos] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [offset, setOffset] = useState(0) // meses corridos hacia el pasado
 
   const cargarDatos = useCallback(async () => {
     const { anio, mes } = mesActual()
 
-    // Generar los últimos 4 períodos (actual + 3 anteriores)
+    // Mes final de la ventana = mes actual corrido "offset" meses hacia atrás.
+    let ea = anio
+    let em = mes - offset
+    while (em <= 0) {
+      em += 12
+      ea -= 1
+    }
+
+    // Generar 4 períodos (el final + 3 anteriores)
     const periodos = []
-    let a = anio
-    let m = mes
+    let a = ea
+    let m = em
     for (let i = 0; i < 4; i++) {
       periodos.unshift({ anio: a, mes: m })
       m -= 1
@@ -48,7 +57,7 @@ export default function PaymentTable({ mostrarMontos = false }) {
     setMeses(mesesFiltrados)
     setPagos(pagosData)
     setCargando(false)
-  }, [])
+  }, [offset])
 
   useEffect(() => {
     cargarDatos()
@@ -73,8 +82,42 @@ export default function PaymentTable({ mostrarMontos = false }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200">
-      <table className="min-w-full text-sm">
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setOffset((o) => o + 4)}
+            title="Meses anteriores"
+            aria-label="Ver meses anteriores"
+            className="flex items-center gap-1 h-10 px-3 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 font-medium transition"
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+            Anteriores
+          </button>
+          <button
+            onClick={() => setOffset((o) => Math.max(0, o - 4))}
+            disabled={offset === 0}
+            title="Meses siguientes"
+            aria-label="Ver meses siguientes"
+            className="flex items-center gap-1 h-10 px-3 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 font-medium transition disabled:opacity-30 disabled:cursor-default"
+          >
+            Siguientes
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+        {offset > 0 && (
+          <button onClick={() => setOffset(0)} className="text-sm text-tinta hover:underline font-medium">
+            Volver al mes actual
+          </button>
+        )}
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-slate-50 text-slate-500 text-left">
             <th className="px-4 py-3 font-medium sticky left-0 bg-slate-50">Depto</th>
@@ -115,7 +158,8 @@ export default function PaymentTable({ mostrarMontos = false }) {
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   )
 }
