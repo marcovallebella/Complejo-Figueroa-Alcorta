@@ -21,6 +21,11 @@ export default function AdminPanel() {
   const [pagosMes, setPagosMes] = useState([])
   const [montoMes, setMontoMes] = useState('')
   const [guardandoMonto, setGuardandoMonto] = useState(false)
+  // Configuración del monto por período (pasado/presente/futuro)
+  const [cfgAnio, setCfgAnio] = useState(() => mesActual().anio)
+  const [cfgMes, setCfgMes] = useState(() => mesActual().mes)
+  const [cfgMonto, setCfgMonto] = useState('')
+  const [guardandoCfg, setGuardandoCfg] = useState(false)
   const [morosos, setMorosos] = useState([])
   const [historial, setHistorial] = useState([])
   const [filtroDepto, setFiltroDepto] = useState('')
@@ -158,6 +163,45 @@ export default function AdminPanel() {
     const hoy = new Date().toISOString().slice(0, 10)
     descargarCSV(`historial-pagos-${hoy}.csv`, encabezados, filas)
     toast.success('Excel descargado')
+  }
+
+  // Al cambiar el período elegido, cargamos el monto ya definido (si existe).
+  useEffect(() => {
+    async function cargarMontoCfg() {
+      const { data } = await supabase
+        .from('meses')
+        .select('monto_expensa')
+        .eq('anio', cfgAnio)
+        .eq('mes', cfgMes)
+        .maybeSingle()
+      setCfgMonto(data?.monto_expensa != null ? String(data.monto_expensa) : '')
+    }
+    cargarMontoCfg()
+  }, [cfgAnio, cfgMes])
+
+  async function guardarMontoPeriodo(e) {
+    e.preventDefault()
+    if (cfgMonto === '' || Number(cfgMonto) < 0) {
+      toast.error('Ingresá un monto válido')
+      return
+    }
+    setGuardandoCfg(true)
+    const { data: existente } = await supabase
+      .from('meses')
+      .select('id')
+      .eq('anio', cfgAnio)
+      .eq('mes', cfgMes)
+      .maybeSingle()
+    const { error } = existente
+      ? await supabase.from('meses').update({ monto_expensa: Number(cfgMonto) }).eq('id', existente.id)
+      : await supabase.from('meses').insert({ anio: cfgAnio, mes: cfgMes, monto_expensa: Number(cfgMonto) })
+    setGuardandoCfg(false)
+    if (error) {
+      toast.error('No se pudo guardar el monto')
+      return
+    }
+    toast.success(`Monto de ${nombreMes(cfgMes, cfgAnio)} guardado`)
+    cargarResumen()
   }
 
   async function handleGuardarMonto(e) {
@@ -338,22 +382,46 @@ export default function AdminPanel() {
         <TablaDeudaComplejo editable />
       </section>
 
-      <section className="bg-white border border-slate-100 rounded-2xl p-6 max-w-md">
-        <h3 className="text-sm font-semibold text-slate-600 mb-3">
-          Monto de expensas — {nombreMes(mes, anio)}
-        </h3>
-        <form onSubmit={handleGuardarMonto} className="flex gap-3">
-          <input
-            type="number"
-            required
-            value={montoMes}
-            onChange={(e) => setMontoMes(e.target.value)}
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-            placeholder="50000"
-          />
+      <section className="bg-white border border-slate-100 rounded-2xl p-6 max-w-lg">
+        <h3 className="text-sm font-semibold text-slate-600 mb-1">Monto de expensas por período</h3>
+        <p className="text-xs text-slate-400 mb-3">
+          Definí o editá el valor de la expensa común para cualquier mes (pasado, presente o futuro).
+        </p>
+        <form onSubmit={guardarMontoPeriodo} className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Mes</label>
+            <select
+              value={cfgMes}
+              onChange={(e) => setCfgMes(Number(e.target.value))}
+              className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>{nombreMes(m, cfgAnio)}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Año</label>
+            <input
+              type="number"
+              value={cfgAnio}
+              onChange={(e) => setCfgAnio(Number(e.target.value))}
+              className="w-24 rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+            />
+          </div>
+          <div className="flex-1 min-w-[120px]">
+            <label className="block text-xs font-medium text-slate-500 mb-1">Monto</label>
+            <input
+              type="number"
+              value={cfgMonto}
+              onChange={(e) => setCfgMonto(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+              placeholder="45000"
+            />
+          </div>
           <button
             type="submit"
-            disabled={guardandoMonto}
+            disabled={guardandoCfg}
             className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-lg"
           >
             Guardar

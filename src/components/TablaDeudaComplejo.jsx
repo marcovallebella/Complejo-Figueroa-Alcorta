@@ -34,30 +34,37 @@ export default function TablaDeudaComplejo({ editable = false }) {
     const mesRow = (todosMeses || []).find((m) => m.anio === vistaAnio && m.mes === vistaMes) || null
     setMesSelRow(mesRow)
 
+    // Un mes está "facturado" (exigible) si ya pasó, o si es el mes corriente y
+    // ya pasó el día 10 (antes del 10 NO cuenta como deuda).
+    const hoyDia = new Date().getDate()
+    const esFacturado = (m) =>
+      m.anio < anioHoy ||
+      (m.anio === anioHoy && m.mes < mesHoy) ||
+      (m.anio === anioHoy && m.mes === mesHoy && hoyDia > 10)
+
     const resultado = (deptos || []).map((depto) => {
-      let deuda = 0
+      const pagosDepto = (todosPagos || []).filter((p) => p.depto_id === depto.id)
+      const pagadoTotal = pagosDepto.reduce((a, p) => a + Number(p.monto || 0), 0)
+
+      // Total facturado (exigible) hasta hoy y meses sin pago registrado.
+      let facturado = 0
       let mesesAdeudados = 0
       for (const m of todosMeses || []) {
-        // acumulado hasta el mes seleccionado (inclusive)
-        const posterior = m.anio > vistaAnio || (m.anio === vistaAnio && m.mes > vistaMes)
-        if (posterior) continue
-        const pago = (todosPagos || []).find((p) => p.depto_id === depto.id && p.mes_id === m.id)
-        const estado = calcularEstado({ tienePago: Boolean(pago), anio: m.anio, mes: m.mes })
-        // Solo "vencido" (pasó el día 10 sin pagar) es deuda. "Pendiente" (mes
-        // corriente antes del día 10) NO cuenta como deuda.
-        if (estado === 'vencido') {
-          mesesAdeudados += 1
-          deuda += Number(m.monto_expensa || 0)
-        }
+        if (!esFacturado(m)) continue
+        facturado += Number(m.monto_expensa || 0)
+        if (!pagosDepto.find((p) => p.mes_id === m.id)) mesesAdeudados += 1
       }
-      const pagoSel = mesRow
-        ? (todosPagos || []).find((p) => p.depto_id === depto.id && p.mes_id === mesRow.id) || null
-        : null
-      // El estado del mes (Al día / Pendiente / Vencido) se calcula siempre,
-      // aunque el mes todavía no tenga monto definido: si no hay pago, muestra
-      // "Pendiente" hasta el día 10 y "Vencido" después.
+
+      // Cuenta corriente del depto: pagado − facturado.
+      //   > 0  saldo a favor (pagó de más)
+      //   < 0  debe (le falta para estar al día)
+      const saldoCuenta = pagadoTotal - facturado
+
+      // Estado del mes seleccionado en el navegador (Al día / Pendiente / Vencido).
+      const pagoSel = mesRow ? pagosDepto.find((p) => p.mes_id === mesRow.id) || null : null
       const estadoSel = calcularEstado({ tienePago: Boolean(pagoSel), anio: vistaAnio, mes: vistaMes })
-      return { depto, estadoSel, pagoSel, mesesAdeudados, deuda }
+
+      return { depto, estadoSel, pagoSel, mesesAdeudados, saldoCuenta }
     })
 
     setFilas(resultado)
@@ -161,7 +168,8 @@ export default function TablaDeudaComplejo({ editable = false }) {
     return <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">Pendiente</span>
   }
 
-  const totalComplejo = filas.reduce((a, f) => a + f.deuda, 0)
+  const totalAdeudado = filas.reduce((a, f) => a + (f.saldoCuenta < 0 ? -f.saldoCuenta : 0), 0)
+  const totalAFavor = filas.reduce((a, f) => a + (f.saldoCuenta > 0 ? f.saldoCuenta : 0), 0)
 
   return (
     <div>
@@ -202,15 +210,19 @@ export default function TablaDeudaComplejo({ editable = false }) {
                 <th className="px-4 py-3 font-medium">Depto</th>
                 <th className="px-4 py-3 font-medium">Estado ({nombreMes(vistaMes, vistaAnio)})</th>
                 <th className="px-4 py-3 font-medium">Morosidad</th>
-                <th className="px-4 py-3 font-medium text-right">Total deuda</th>
+                <th className="px-4 py-3 font-medium text-right">Saldo de cuenta</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filas.map((f) => {
-                const enDeuda = f.deuda > 0 || f.estadoSel === 'vencido'
-                const pendiente = !enDeuda && f.estadoSel === 'pendiente'
-                // Rojo = deuda vencida · Ámbar = mes corriente pendiente · Verde = al día
-                const colorFila = enDeuda ? 'bg-red-50' : pendiente ? 'bg-amber-50' : 'bg-green-50'
+                const debe = f.saldoCuenta < 0
+                const aFavor = f.saldoCuenta > 0
+                // Rojo = debe · Ámbar = al día pero falta el mes corriente · Verde = al día / a favor
+                const colorFila = debe
+                  ? 'bg-red-50'
+                  : f.saldoCuenta === 0 && f.estadoSel === 'pendiente'
+                    ? 'bg-amber-50'
+                    : 'bg-green-50'
                 return (
                   <tr key={f.depto.id} className={colorFila}>
                     <td className="px-4 py-3 font-medium text-slate-700">{f.depto.nombre}</td>
@@ -238,10 +250,12 @@ export default function TablaDeudaComplejo({ editable = false }) {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap font-medium">
-                      {enDeuda ? (
-                        <span className="text-red-600">${f.deuda.toLocaleString('es-AR')}</span>
+                      {debe ? (
+                        <span className="text-red-600">Debe ${Math.abs(f.saldoCuenta).toLocaleString('es-AR')}</span>
+                      ) : aFavor ? (
+                        <span className="text-green-600">A favor ${f.saldoCuenta.toLocaleString('es-AR')}</span>
                       ) : (
-                        <span className="text-green-600">$0</span>
+                        <span className="text-green-600">Al día</span>
                       )}
                     </td>
                   </tr>
@@ -250,9 +264,16 @@ export default function TablaDeudaComplejo({ editable = false }) {
             </tbody>
             <tfoot>
               <tr className="bg-slate-50 font-semibold text-tinta border-t-2 border-slate-200">
-                <td className="px-4 py-3" colSpan={3}>Total adeudado del complejo</td>
+                <td className="px-4 py-3" colSpan={3}>
+                  Total adeudado al complejo
+                  {totalAFavor > 0 && (
+                    <span className="text-green-600 font-normal text-xs ml-2">
+                      (a favor: ${totalAFavor.toLocaleString('es-AR')})
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap text-red-600">
-                  ${totalComplejo.toLocaleString('es-AR')}
+                  ${totalAdeudado.toLocaleString('es-AR')}
                 </td>
               </tr>
             </tfoot>

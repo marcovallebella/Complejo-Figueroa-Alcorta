@@ -13,7 +13,7 @@ export default function UserPanel({ departamento }) {
   const [pagoActual, setPagoActual] = useState(null)
   const [historial, setHistorial] = useState([])
   const [mesesAdeudados, setMesesAdeudados] = useState(0)
-  const [deudaAcumulada, setDeudaAcumulada] = useState(0)
+  const [saldoCuenta, setSaldoCuenta] = useState(0) // pagado − facturado (>0 a favor, <0 debe)
   const [cargando, setCargando] = useState(true)
   const [modalTransferenciaAbierto, setModalTransferenciaAbierto] = useState(false)
   const [modulo, setModulo] = useState('expensas') // 'expensas' | 'gastos' | 'balance' | 'reclamos'
@@ -50,19 +50,21 @@ export default function UserPanel({ departamento }) {
       .order('anio')
       .order('mes')
 
+    // Cuenta corriente del depto: pagado − facturado (exigible hasta hoy).
+    const hoyDia = new Date().getDate()
+    const esFacturado = (m) =>
+      m.anio < anio || (m.anio === anio && m.mes < mes) || (m.anio === anio && m.mes === mes && hoyDia > 10)
+
     let pendientes = 0
-    let deuda = 0
+    let facturado = 0
     for (const m of todosMeses || []) {
-      const esActual = m.anio === anio && m.mes === mes
-      const pago = pagosDepto?.find((p) => p.mes_id === m.id)
-      const estado = calcularEstado({ tienePago: Boolean(pago), anio: m.anio, mes: m.mes })
-      if (!esActual && estado !== 'pagado' && (estado === 'vencido' || m.anio < anio || (m.anio === anio && m.mes < mes))) {
-        pendientes += 1
-        deuda += Number(m.monto_expensa || 0)
-      }
+      if (!esFacturado(m)) continue
+      facturado += Number(m.monto_expensa || 0)
+      if (!pagosDepto?.find((p) => p.mes_id === m.id)) pendientes += 1
     }
+    const pagadoTotal = (pagosDepto || []).reduce((a, p) => a + Number(p.monto || 0), 0)
     setMesesAdeudados(pendientes)
-    setDeudaAcumulada(deuda)
+    setSaldoCuenta(pagadoTotal - facturado)
 
     setCargando(false)
   }, [departamento.id])
@@ -154,15 +156,29 @@ export default function UserPanel({ departamento }) {
       <div className="flex-1 min-w-0">
         {modulo === 'expensas' && (
           <div className="space-y-8">
-            {deudaAcumulada > 0 ? (
+            {saldoCuenta < 0 ? (
               <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
                 <span className="text-2xl">⚠️</span>
                 <div>
                   <p className="text-sm font-semibold text-red-700">
-                    Tenés una deuda de ${deudaAcumulada.toLocaleString('es-AR')}
+                    Debés ${Math.abs(saldoCuenta).toLocaleString('es-AR')}
                   </p>
                   <p className="text-xs text-red-600/80">
-                    {mesesAdeudados} {mesesAdeudados === 1 ? 'mes pendiente' : 'meses pendientes'} de meses anteriores. Por favor regularizá tu situación.
+                    Es lo que te falta para estar al día
+                    {mesesAdeudados > 0 && ` (${mesesAdeudados} ${mesesAdeudados === 1 ? 'mes' : 'meses'} sin pagar)`}.
+                    Por favor regularizá tu situación.
+                  </p>
+                </div>
+              </div>
+            ) : saldoCuenta > 0 ? (
+              <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+                <span className="text-2xl">💚</span>
+                <div>
+                  <p className="text-sm font-semibold text-green-700">
+                    Tenés ${saldoCuenta.toLocaleString('es-AR')} a favor
+                  </p>
+                  <p className="text-xs text-green-600/80">
+                    Pagaste de más: ese saldo queda a tu favor para los próximos meses.
                   </p>
                 </div>
               </div>
@@ -171,9 +187,7 @@ export default function UserPanel({ departamento }) {
                 <span className="text-2xl">✅</span>
                 <div>
                   <p className="text-sm font-semibold text-green-700">Estás al día</p>
-                  <p className="text-xs text-green-600/80">
-                    No tenés deuda de meses anteriores. ¡Gracias!
-                  </p>
+                  <p className="text-xs text-green-600/80">No tenés deuda pendiente. ¡Gracias!</p>
                 </div>
               </div>
             )}
