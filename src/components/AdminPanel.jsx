@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { supabase, calcularEstado, mesActual, nombreMes, fechaCorta } from '../lib/supabase'
+import { supabase, calcularEstado, mesActual, nombreMes, fechaCorta, INICIO_ANIO, INICIO_MES } from '../lib/supabase'
 import EstadoBadge from './EstadoBadge'
 import PaymentTable from './PaymentTable'
 import RegisterPaymentModal from './RegisterPaymentModal'
@@ -460,10 +460,9 @@ export default function AdminPanel() {
             onChange={(e) => setFiltroPeriodo(e.target.value)}
             className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
           >
-            {Array.from({ length: 24 }).map((_, i) => {
-              const base = mesActual()
-              let yy = base.anio
-              let mm = base.mes - i
+            {Array.from({ length: (anio - INICIO_ANIO) * 12 + (mes - INICIO_MES) + 1 }).map((_, i) => {
+              let yy = anio
+              let mm = mes - i
               while (mm <= 0) { mm += 12; yy -= 1 }
               const val = `${yy}-${mm}`
               return <option key={val} value={val}>{nombreMes(mm, yy)}</option>

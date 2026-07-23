@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { supabase, calcularEstado, nombreMes, mesActual, fechaCorta } from '../lib/supabase'
+import { supabase, calcularEstado, nombreMes, mesActual, fechaCorta, INICIO_ANIO, INICIO_MES } from '../lib/supabase'
 import EstadoBadge from './EstadoBadge'
 
 // Tabla general: Depto 1..18 x últimos 3 meses + mes actual.
@@ -81,15 +81,21 @@ export default function PaymentTable({ mostrarMontos = false }) {
     return pagos.find((p) => p.depto_id === deptoId && p.mes_id === mesId) || null
   }
 
+  // Tope: no dejar que el mes más viejo visible sea anterior a enero 2025.
+  const { anio: anioHoy, mes: mesHoy } = mesActual()
+  const mesesDesdeInicio = (anioHoy - INICIO_ANIO) * 12 + (mesHoy - INICIO_MES)
+  const maxOffset = Math.max(0, mesesDesdeInicio - 3)
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setOffset((o) => o + 4)}
+            onClick={() => setOffset((o) => Math.min(maxOffset, o + 4))}
+            disabled={offset >= maxOffset}
             title="Meses anteriores"
             aria-label="Ver meses anteriores"
-            className="flex items-center gap-1 h-10 px-3 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 font-medium transition"
+            className="flex items-center gap-1 h-10 px-3 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 font-medium transition disabled:opacity-30 disabled:cursor-default"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />

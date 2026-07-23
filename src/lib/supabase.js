@@ -34,6 +34,10 @@ export const ESTADOS = {
   VENCIDO: 'vencido',
 }
 
+// Mes de inicio de la historia de la app: no se navega antes de esto.
+export const INICIO_ANIO = 2025
+export const INICIO_MES = 1
+
 export const MESES_NOMBRE = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',

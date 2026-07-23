@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { supabase, calcularEstado, mesActual, nombreMes } from '../lib/supabase'
+import { supabase, calcularEstado, mesActual, nombreMes, INICIO_ANIO, INICIO_MES } from '../lib/supabase'
 
 function mesAnterior(anio, mes) {
   return mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 }
@@ -98,6 +98,7 @@ export default function TablaDeudaComplejo({ editable = false }) {
   }
 
   const esHoy = vistaAnio === anioHoy && vistaMes === mesHoy
+  const esInicio = vistaAnio === INICIO_ANIO && vistaMes === INICIO_MES
 
   // Último monto de expensa definido (para heredarlo cuando se marca un pago
   // en un mes que todavía no tiene monto propio, y no quede en $0).
@@ -178,7 +179,8 @@ export default function TablaDeudaComplejo({ editable = false }) {
         <div className="flex items-center gap-2">
           <button
             onClick={irAnterior}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 transition"
+            disabled={esInicio}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 transition disabled:opacity-30 disabled:cursor-default"
           >
             ‹
           </button>

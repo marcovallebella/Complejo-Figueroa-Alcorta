@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { supabase } from '../lib/supabase'
+import { supabase, INICIO_ANIO, INICIO_MES } from '../lib/supabase'
 
 const GRUPOS = [
   { grupo: 'Servicios', items: ['Luz', 'Agua', 'Gas', 'Limpieza', 'Ascensores'] },
@@ -79,6 +79,7 @@ export default function EgresosPanel({ editable = false }) {
   }
 
   const esHoy = vistaAnio === hoy.getFullYear() && vistaMes === hoy.getMonth() + 1
+  const esInicio = vistaAnio === INICIO_ANIO && vistaMes === INICIO_MES
 
   async function registrar(e) {
     e.preventDefault()
@@ -197,7 +198,8 @@ export default function EgresosPanel({ editable = false }) {
         <div className="flex items-center gap-2">
           <button
             onClick={irAnterior}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 transition"
+            disabled={esInicio}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-500 transition disabled:opacity-30 disabled:cursor-default"
           >
             ‹
           </button>
